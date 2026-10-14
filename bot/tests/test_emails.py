@@ -98,9 +98,9 @@ def test_inquiry_with_deadline():
 
 
 @pytest.mark.parametrize("subject,expected", [
-    ("Reservation confirmed - Pat Lee arrives Oct 9", "✅ Confirmed on Airbnb: Pat Lee arrives Oct 9"),
+    ("Reservation confirmed - Pat Lee arrives Oct 9", "✅ New booking on Airbnb: Pat Lee · arrives Oct 9"),
     ("Canceled: Reservation HMKMHAKMCZ for Oct 15 – 18, 2026", "❌ Canceled on Airbnb: HMKMHAKMCZ (Oct 15 – 18, 2026)"),
-    ("Brady left a 5-star review!", "⭐ Brady left a 5-star review"),
+    ("Brady left a 5-star review!", "⭐ Brady left a 5-star review on Airbnb"),
 ])
 def test_one_liners(subject, expected):
     assert emails.card(emails.parse(email(subject, "", "Airbnb <automated@airbnb.com>")), TZ) == (expected, None)
@@ -110,7 +110,47 @@ def test_routine_and_unrelated_mail_is_skipped():
     assert emails.parse(email("Account activity: New login from Chrome using macOS", "", "Airbnb <automated@airbnb.com>")) is None
     assert emails.parse(email("Write a review for Drew, who checked out today", "", "Airbnb <automated@airbnb.com>")) is None
     assert emails.parse(email("Your order", "", "shop@example.com")) is None
-    assert emails.card(emails.parse(email("New booking", "", "VRBO <x@eg.vrbo.com>")), TZ)[0] == "📧 VRBO: New booking"
+    assert emails.parse(email("Turn short gaps into bookings", "", "Vrbo <vrbo@mk.vrbo.com>")) is None
+
+
+VRBO_INQUIRY = """Hello, Curt M is interested in your property.
+
+Dates:
+        Jul 4 - Jul 8, 2026, 4 nights
+Guests:
+        2 adults, 0 children
+Traveler Name:
+        Curt M
+
+Further info
+
+I appreciate no pets for guests, but have there been any pets in the unit
+recently? :)
+
+Respond to this Inquiry
+
+https://www.vrbo.com/supply/interaction?interactionId=bdb9e0db-706c&propertyId=1&utm_campaign=X
+"""
+
+
+def test_vrbo_formats():
+    sender = "Curt M <sender@messages.homeaway.com>"
+    item = emails.parse(email("Inquiry from Curt M: Jul 4 - Jul 8, 2026 - Vrbo #5114807", VRBO_INQUIRY, sender))
+    assert (item["kind"], item["guest"], item["dates"], item["guests"]) == ("inquiry", "Curt M", "Jul 4 - Jul 8, 2026", "2 adults")
+    assert item["body"] == "I appreciate no pets for guests, but have there been any pets in the unit recently? :)"
+    text, kb = emails.card(item, TZ)
+    assert text.startswith("⏳ Inquiry: Curt M · Jul 4 - Jul 8, 2026 · 2 adults\n\"I appreciate")
+    assert kb.inline_keyboard[0][1].text == "Open in VRBO"
+    assert kb.inline_keyboard[0][1].url == "https://www.vrbo.com/supply/interaction?interactionId=bdb9e0db-706c"
+    booked = emails.parse(email("Instant Booking from Kate B: Dec 30, 2026 - Jan 2, 2027 - Vrbo #5114807",
+                                "Guests:\n        4 adults, 2 children\n", sender))
+    assert emails.card(booked, TZ)[0] == "✅ New booking on VRBO: Kate B · Dec 30, 2026 - Jan 2, 2027 · 4 adults, 2 children"
+    canceled = emails.parse(email("Booking canceled by traveler: Dec 30, 2026 - Jan 2, 2027 (Property ID 5114807) "
+                                  "Reservation HA-30FWLZ", "", sender))
+    assert emails.card(canceled, TZ)[0] == "❌ Canceled on VRBO: HA-30FWLZ (Dec 30, 2026 - Jan 2, 2027)"
+    review = emails.parse(email("Martin reviewed their stay (September 23, 2026-September 27, 2026) at your property # 1",
+                                "", "Vrbo <noreply@reviews.homeaway.com>"))
+    assert emails.card(review, TZ)[0] == "⭐ Martin left a review on VRBO"
 
 
 class FakeInbox:
@@ -134,3 +174,11 @@ def test_scan_baseline_then_new_mail(cfg):
     inbox.mail["new"] = email("Dana left a 4-star review!", "") | {"id": "new"}
     got = emails.scan(cfg, [inbox], state)
     assert [i["id"] for i in got] == ["new"] and emails.scan(cfg, [inbox], state) == []
+    # Airbnb mails both hosts: the same notification in the second inbox is reported once
+    other = FakeInbox()
+    other.label = "leomproperty"
+    other.mail["old"] = inbox.mail["old"]
+    assert emails.scan(cfg, [inbox, other], state) == []  # baseline for the new inbox
+    inbox.mail["n2"] = email("Sam left a 5-star review!", "") | {"id": "n2"}
+    other.mail["x2"] = email("Sam left a 5-star review!", "") | {"id": "x2", "date": T0 + 60_000}
+    assert [i["id"] for i in emails.scan(cfg, [inbox, other], state)] == ["n2"]

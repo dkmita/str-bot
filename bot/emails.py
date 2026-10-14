@@ -22,13 +22,20 @@ CHECK_EVERY = timedelta(minutes=5)
 ROLES = {"Booker", "Guest", "Co-traveler", "Host", "Co-host"}
 HOST_ROLES = {"Host", "Co-host"}
 
-SUBJECTS = [  # (kind, pattern) — first match wins
+SUBJECTS = [  # Airbnb: (kind, pattern) — first match wins
     ("message", re.compile(r"^RE: (?:Reservation|Pre-approval|Inquiry|Request) for (?P<listing>.+?), (?P<dates>.+)$")),
     ("inquiry", re.compile(r"^Inquiry for (?P<listing>.+?) for (?P<dates>.+)$")),
     ("request", re.compile(r"^Pending: Reservation Request")),
     ("confirmed", re.compile(r"^Reservation confirmed - (?P<guest>.+?) arrives (?P<arrives>.+)$")),
     ("canceled", re.compile(r"^Canceled: Reservation (?P<code>\w+) for (?P<dates>.+)$")),
     ("review", re.compile(r"^(?P<guest>.+?) left a (?P<stars>\d)-star review")),
+]
+VRBO_SUBJECTS = [  # from messages.homeaway.com / reviews.homeaway.com; everything else from VRBO is marketing
+    ("confirmed", re.compile(r"^(?:Reservation|Instant Booking) from (?P<guest>.+?): (?P<dates>.+?) - Vrbo #")),
+    ("inquiry", re.compile(r"^Inquiry from (?P<guest>.+?): (?P<dates>.+?) - Vrbo #")),
+    ("message", re.compile(r"^Message from (?P<guest>.+?): (?P<dates>.+?) - Vrbo #")),
+    ("canceled", re.compile(r"^Booking canceled by traveler: (?P<dates>.+?) \(Property ID \d+\) Reservation (?P<code>\S+)")),
+    ("review", re.compile(r"^(?P<guest>\S+) reviewed their stay")),
 ]
 
 
@@ -40,8 +47,11 @@ def _platform(sender: str) -> str | None:
 
 
 def _thread_url(text: str) -> str | None:
-    m = re.search(r"https://www\.airbnb\.com/hosting/thread/(\d+)", text)
-    return f"https://www.airbnb.com/hosting/thread/{m[1]}" if m else None
+    if m := re.search(r"https://www\.airbnb\.com/hosting/thread/(\d+)", text):
+        return f"https://www.airbnb.com/hosting/thread/{m[1]}"
+    if m := re.search(r"https://www\.vrbo\.com/supply/interaction\?interactionId=([\w-]+)", text):
+        return f"https://www.vrbo.com/supply/interaction?interactionId={m[1]}"
+    return None
 
 
 def guest_messages(text: str) -> list[dict]:
@@ -80,8 +90,14 @@ def _inquiry(text: str) -> tuple[str | None, str]:
 
 
 def _guests(text: str) -> str | None:
-    m = re.search(r"GUESTS\s*\n\s*(.+)", text)
-    return m[1].strip() if m else None
+    m = re.search(r"(?:GUESTS|Guests:)\s*\n\s*(.+)", text)
+    return m[1].strip().removesuffix(", 0 children") if m else None
+
+
+def _vrbo_body(text: str) -> str:
+    """The traveler's own words in a VRBO inquiry/message ("Further info" … "Respond to this …")."""
+    m = re.search(r"Further info\s*\n(.*?)\n\s*Respond to this", text, re.S)
+    return " ".join(m[1].split()) if m else ""
 
 
 def parse(email: dict) -> dict | None:
@@ -92,8 +108,14 @@ def parse(email: dict) -> dict | None:
     subject = email["subject"].strip()
     base = {"id": email["id"], "platform": platform, "subject": subject, "date": email["date"],
             "thread_url": _thread_url(email["text"])}
-    if platform == "VRBO":  # formats not seen yet: pass the subject through
-        return base | {"kind": "other"}
+    if platform == "VRBO":
+        for kind, pattern in VRBO_SUBJECTS:
+            if m := pattern.search(subject):
+                body = _vrbo_body(email["text"])
+                extra = {"messages": [{"name": m["guest"], "role": "Guest", "text": body}] if body else []} \
+                    if kind == "message" else {"body": body} if kind == "inquiry" else {}
+                return base | {"kind": kind, **m.groupdict(), "guests": _guests(email["text"]), **extra}
+        return None  # marketing, tips, "review your guest" reminders
     for kind, pattern in SUBJECTS:
         if m := pattern.search(subject):
             return base | {"kind": kind, **m.groupdict(), **_details(kind, email["text"])}
@@ -127,16 +149,16 @@ def card(item: dict, tz) -> tuple[str, InlineKeyboardMarkup | None] | None:
         text = (f"⏳ {label}: {item.get('guest') or 'guest'} · {dates or item['subject']}{guests}{what}\n"
                 f"Respond by {due:%a %-I:%M %p}")
     elif kind == "confirmed":
-        return f"✅ Confirmed on {item['platform']}: {item['guest']} arrives {item['arrives']}", None
+        when = f"arrives {item['arrives']}" if item.get("arrives") else item["dates"]
+        return f"✅ New booking on {item['platform']}: {item['guest']} · {when}{guests}", None
     elif kind == "canceled":
         return f"❌ Canceled on {item['platform']}: {item['code']} ({item['dates']})", None
-    elif kind == "review":
-        return f"⭐ {item['guest']} left a {item['stars']}-star review", None
-    else:
-        return f"📧 {item['platform']}: {item['subject']}", None
+    else:  # review
+        stars = f" a {item['stars']}-star review" if item.get("stars") else " a review"
+        return f"⭐ {item['guest']} left{stars} on {item['platform']}", None
     rows = [[InlineKeyboardButton("✍️ Draft reply", callback_data=f"em|d|{item['id']}")]]
     if item.get("thread_url"):
-        rows[0].append(InlineKeyboardButton("Open in Airbnb", url=item["thread_url"]))
+        rows[0].append(InlineKeyboardButton(f"Open in {item['platform']}", url=item["thread_url"]))
     return text, InlineKeyboardMarkup(rows)
 
 
@@ -152,8 +174,12 @@ def _save(cfg, state: dict) -> None:
     (cfg.state_dir / "emails.json").write_text(json.dumps(state, ensure_ascii=False))
 
 
+DUPLICATE_WINDOW = 30 * 60 * 1000  # ms: Airbnb mails both hosts; the same subject within 30 min is one event
+
+
 def scan(cfg, inboxes, state: dict) -> list[dict]:
-    """New notification emails across inboxes, oldest first. First read per inbox = silent baseline."""
+    """New notification emails across inboxes, oldest first. First read per inbox = silent baseline;
+    the same notification arriving in both inboxes is reported once."""
     new = []
     for inbox in inboxes:
         ids = inbox.recent_ids()
@@ -167,7 +193,16 @@ def scan(cfg, inboxes, state: dict) -> list[dict]:
             if item := parse(inbox.get(msg_id)):
                 new.append(item)
         state["seen"][inbox.label] = (fresh + seen)[:500]
-    return sorted(new, key=lambda it: it["date"])
+    recent = state.setdefault("recent", [])  # [platform|subject, date ms] of reported notifications
+    out = []
+    for item in sorted(new, key=lambda it: it["date"]):
+        key = f"{item['platform']}|{item['subject']}"
+        if any(k == key and abs(d - item["date"]) < DUPLICATE_WINDOW for k, d in recent):
+            continue
+        recent.append([key, item["date"]])
+        out.append(item)
+    state["recent"] = recent[-200:]
+    return out
 
 
 async def watch(ctx: ContextTypes.DEFAULT_TYPE) -> None:
