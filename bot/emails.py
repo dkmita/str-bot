@@ -219,6 +219,8 @@ async def watch(ctx: ContextTypes.DEFAULT_TYPE) -> None:
             await ctx.bot.send_message(cfg.allowed_chat_id, shown[0], reply_markup=shown[1])
             sent += 1
     _save(cfg, state)
+    import health  # local import: health imports chat, which this module also uses
+    health.job_ok(ctx.bot_data, "email_watch")
     log.info("Email watch: %d new notification email(s), %d sent", len(items), sent)
 
 

@@ -29,6 +29,7 @@ class Config:
     git_push: bool
     log_content: bool
     hc_ping_url: str | None
+    hc_deps_ping_url: str | None  # healthchecks.io check for the 30-min connection checks
 
     @property
     def state_dir(self) -> Path:
@@ -58,4 +59,5 @@ def load() -> Config:
         git_push=os.environ.get("GIT_PUSH", "false").lower() == "true",
         log_content=os.environ.get("LOG_CONTENT", "true").lower() == "true",
         hc_ping_url=os.environ.get("HC_PING_URL") or None,
+        hc_deps_ping_url=os.environ.get("HC_DEPS_PING_URL") or None,
     )

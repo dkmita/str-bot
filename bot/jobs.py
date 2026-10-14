@@ -8,6 +8,7 @@ from datetime import date, datetime, time, timedelta
 from telegram.ext import ContextTypes
 
 import chat
+import health
 from integrations import ical
 
 log = logging.getLogger("str")
@@ -71,6 +72,7 @@ async def watch(ctx: ContextTypes.DEFAULT_TYPE) -> None:
     state = json.loads(path.read_text()) if path.exists() else {}
     messages, state = await asyncio.to_thread(scan, cfg, state)
     path.write_text(json.dumps(state))
+    health.job_ok(ctx.bot_data, "booking_watch")
     log.info("Booking watch: %d stays/blocks, %d change(s)", len(state["entries"]), len(messages))
     if messages and cfg.allowed_chat_id is not None:
         await chat.send(ctx.application, cfg.allowed_chat_id, "\n".join(messages))

@@ -36,12 +36,12 @@ check(not unhandled, f"every tool has a handler {unhandled or ''}")
 check(agent.system.startswith("# STR Host Assistant") and "Running as a Telegram bot" in agent.system,
       "system prompt = host.md + telegram.md")
 jobs = sorted(j.name for j in app.job_queue.jobs())
-check({"heartbeat", "booking_watch", "email_watch", "morning"} <= set(jobs), f"scheduled jobs: {', '.join(jobs)}")
+check({"heartbeat", "booking_watch", "email_watch", "morning", "health_check"} <= set(jobs), f"scheduled jobs: {', '.join(jobs)}")
 check(cfg.allowed_chat_id is not None, "TELEGRAM_ALLOWED_CHAT_ID is set")
 check(bool(cfg.feeds), f"reservation feeds: {', '.join(sorted(cfg.feeds)) or 'none'}")
 check(cfg.model in usage.PRICES, f"price table has {cfg.model}")
 commands = {c for h in app.handlers.get(0, []) for c in getattr(h, "commands", ())}
-check({"start", "usage", "stays"} <= commands, f"commands registered: {sorted(commands)}")
+check({"start", "usage", "stays", "health"} <= commands, f"commands registered: {sorted(commands)}")
 
 if "--live" in sys.argv:
     from integrations import ical

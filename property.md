@@ -5,7 +5,7 @@ Leanne. Facts the assistant uses for guest answers; door codes and wifi details 
 
 ## Basics
 - Check-in: 4:00 PM · Check-out: 10:00 AM
-- Listings: Airbnb (fill in link) · VRBO #5114807
+- Listings: Airbnb https://www.airbnb.com/rooms/1555937686072225169 · VRBO #5114807
 - Max guests / bedrooms: (fill in)
 - Cleaner: (name; contact in my phone, not here) · Cleaning fee: $285
 

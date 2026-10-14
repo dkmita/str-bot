@@ -9,6 +9,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Mess
 import chat
 import config
 import emails
+import health
 import jobs
 import ops
 from agent import Agent
@@ -32,6 +33,7 @@ def build_app(cfg: config.Config) -> Application:
     app.add_handler(CommandHandler("start", chat.on_start))
     app.add_handler(CommandHandler("usage", chat.on_usage))
     app.add_handler(CommandHandler("stays", chat.on_stays))
+    app.add_handler(CommandHandler("health", health.on_health))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.on_message))
     app.add_handler(CallbackQueryHandler(emails.on_button, pattern=r"^em\|"))
     app.add_error_handler(ops.on_error)
@@ -41,6 +43,7 @@ def build_app(cfg: config.Config) -> Application:
     q.run_repeating(jobs.watch, interval=jobs.WATCH_EVERY, first=60, name="booking_watch")
     q.run_repeating(emails.watch, interval=emails.CHECK_EVERY, first=45, name="email_watch")
     q.run_daily(jobs.morning, jobs.MORNING.replace(tzinfo=cfg.tz), name="morning")
+    q.run_repeating(health.check_job, interval=health.CHECK_EVERY, first=300, name="health_check")
     return app
 
 
@@ -58,8 +61,8 @@ def main() -> None:
     cfg = config.load()
     _file_logging(cfg)
     app = build_app(cfg)
-    log.info("STR bot starting (model=%s, feeds=%s, inboxes=%s, heartbeat=%s)", cfg.model, sorted(cfg.feeds),
-             sorted(cfg.gmail_tokens), cfg.hc_ping_url is not None)
+    log.info("STR bot starting (model=%s, feeds=%s, inboxes=%s, heartbeat=%s, deps check=%s)", cfg.model,
+             sorted(cfg.feeds), sorted(cfg.gmail_tokens), cfg.hc_ping_url is not None, cfg.hc_deps_ping_url is not None)
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 

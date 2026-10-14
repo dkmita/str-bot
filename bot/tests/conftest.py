@@ -41,7 +41,7 @@ def make_config(repo_dir, **over):
     fields = dict(telegram_token="x", allowed_chat_id=CHAT, model="claude-opus-5-5", repo_dir=repo_dir, tz=TZ,
                   google_client_id="x", google_client_secret="x", google_refresh_token="x",
                   property_calendar_ids=["leomproperty@gmail.com"], feeds={"Airbnb": "a", "VRBO": "v"}, gmail_tokens={},
-                  git_push=False, log_content=True, hc_ping_url=None)
+                  git_push=False, log_content=True, hc_ping_url=None, hc_deps_ping_url=None)
     fields.update(over)
     return config.Config(**fields)
 

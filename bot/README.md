@@ -16,6 +16,7 @@ Today it can:
 - 7am (Sedona time): check-outs, arrivals, same-day turnovers and tomorrow's arrivals, if any (no Claude)
 - Chat: questions about stays, drafts of guest replies from `property.md`, keeping notes up to date
 - `/usage [days]`: Claude spend report
+- `/health`: runs every check now (see Monitoring)
 
 Not yet: Home Assistant door codes, messaging and pricing on the platforms, cleaner email/WhatsApp (see CLAUDE.md).
 
@@ -30,7 +31,19 @@ Not yet: Home Assistant door codes, messaging and pricing on the platforms, clea
 | `LEOM_GOOGLE_REFRESH_TOKEN` | same client, signed in as leomproperty@gmail.com (VRBO mail); optional |
 | `AIRBNB_ICAL_URL` / `VRBO_ICAL_URL` | each platform's calendar export link (secret URLs) |
 | `GIT_SSH_KEY` | private half of the GitHub deploy key (write access) for dkmita/str-bot |
-| `HC_PING_URL` | optional: healthchecks.io check, 5 min period |
+| `HC_PING_URL` | healthchecks.io check "str-bot heartbeat": period 5 min, grace 10 min |
+| `HC_DEPS_PING_URL` | healthchecks.io check "str-bot connections": period 30 min, grace 40 min |
+
+## Monitoring
+
+- **Running + Telegram**: heartbeat every 5 min to healthchecks.io (`HC_PING_URL`), sent only if Telegram answers;
+  healthchecks.io emails me if pings stop. A crash also pings `/fail` (entrypoint.sh); Fly restarts the machine.
+- **Connections and jobs** (`health.py`, every 30 min): Airbnb/VRBO feeds, Google Calendar, each Gmail inbox, Claude
+  API (free model lookup), GitHub push (deploy key; unpushed notes over 1 h), disk space, Claude spend over $3/day,
+  and whether the email/booking watches succeeded recently. Two failures in a row → Telegram alert, then a recovery
+  note. Results also go to a second healthchecks.io check (`HC_DEPS_PING_URL`: success, or `/fail` with the list),
+  so a broken Telegram still reaches me by email.
+- Errors in handlers/jobs → Telegram alert (at most one per 10 min).
 
 ## Run locally
 
@@ -52,6 +65,7 @@ bot/
 ├── chat.py            # Telegram plumbing, /start /usage /stays, message → assistant
 ├── jobs.py            # booking watch, morning turnover note (code only)
 ├── ops.py             # error alerts, healthchecks.io heartbeat
+├── health.py          # connection/job checks, /health
 ├── agent.py           # Claude loop, conversations (new one after 1 h idle), context pack
 ├── tools.py           # tool schemas + dispatcher
 ├── prompts/telegram.md# bot-specific instructions appended to host.md
