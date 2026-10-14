@@ -31,6 +31,12 @@ Telegram bot that helps me run my short-term rental in Sedona, AZ (listed on Air
   leomproperty (Gmail filter) or change Airbnb's notification email, then use only the leomproperty token
   (it reads the Sedona Home calendar too) and remove the str-bot grant from d.kmita's Google account.
 
+- Home Assistant (door codes), paused 2026-10-14 (user having VPN trouble): plan = Tailscale in userspace mode on
+  the Fly machine (`TS_AUTHKEY`: reusable + ephemeral key from login.tailscale.com/admin/settings/keys), `HA_URL`
+  = HA's tailnet name:8123, `HA_TOKEN` = long-lived token of a dedicated non-admin HA user. Read-only lock status
+  first, then per-stay codes behind Approve. Tailscale isn't installed on the laptop (stale CLI; the 100.96.x
+  address there is Cloudflare WARP).
+
 ## Rules for any new capability
 - Anything that reaches guests, the listings, prices or the door lock is proposed with approve buttons first
   and applied by code after I tap Approve (same pattern as the coach's proposals).
