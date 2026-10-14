@@ -15,14 +15,20 @@ fi
 git -C "$REPO_DIR" config user.name "STR Bot"
 git -C "$REPO_DIR" config user.email "d.kmita@gmail.com"
 
-# Join the tailnet (only if TS_AUTHKEY is set) in userspace mode. The bot reaches Home Assistant through
-# Tailscale's local HTTP proxy on localhost:1055 (HA_PROXY); MagicDNS names resolve through it.
-if [ -n "${TS_AUTHKEY:-}" ]; then
+# Join the tailnet in userspace mode (TAILSCALE=on in fly.toml). The bot reaches Home Assistant through Tailscale's
+# local HTTP proxy on localhost:1055; MagicDNS names resolve through it. Login: TS_AUTHKEY if set; otherwise the
+# first start prints a login link to /data/tailscale/login.log (open it in a browser to approve). The node's identity
+# is kept on the volume, so later restarts reconnect without logging in again.
+if [ "${TAILSCALE:-}" = "on" ] || [ -n "${TS_AUTHKEY:-}" ]; then
   mkdir -p /data/tailscale
   tailscaled --tun=userspace-networking --statedir=/data/tailscale \
     --outbound-http-proxy-listen=localhost:1055 --socks5-server=localhost:1055 >/data/tailscale/tailscaled.log 2>&1 &
   for _ in 1 2 3 4 5 6 7 8 9 10; do [ -S /var/run/tailscale/tailscaled.sock ] && break; sleep 1; done
-  tailscale up --authkey="$TS_AUTHKEY" --hostname=str-bot --accept-dns=false || echo "tailscale up failed; Home Assistant will be unreachable"
+  if [ -n "${TS_AUTHKEY:-}" ]; then
+    tailscale up --authkey="$TS_AUTHKEY" --hostname=str-bot --accept-dns=false || echo "tailscale up failed"
+  else
+    tailscale up --hostname=str-bot --accept-dns=false >/data/tailscale/login.log 2>&1 &  # waits for approval
+  fi
 fi
 
 # Run the bot; if it exits with an error, tell healthchecks.io right away (Fly then restarts it).

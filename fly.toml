@@ -5,6 +5,7 @@ primary_region = "dfw"
 [env]
   GIT_REPO_URL = "git@github.com:dkmita/str-bot.git"
   PROPERTY_TIMEZONE = "America/Phoenix"
+  TAILSCALE = "on"  # join the tailnet for Home Assistant (see entrypoint.sh)
 
 # Persistent disk for the repo clone and state (conversations, last-seen bookings, usage log).
 [mounts]
