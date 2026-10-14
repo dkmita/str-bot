@@ -1,11 +1,11 @@
 """Home Assistant (at the Sedona house), read-only for now: locks, door sensors, batteries.
 
 Reached over Tailscale: the Fly machine runs tailscaled in userspace mode (entrypoint.sh) and requests go through its
-local HTTP proxy. Auth: a long-lived token of a dedicated non-admin HA user (HA_TOKEN)."""
+local SOCKS5 proxy. (Its HTTP proxy adds a forwarding header that HA rejects with 400 from an untrusted proxy.) Auth: a long-lived token of a dedicated non-admin HA user (HA_TOKEN)."""
 
 import httpx
 
-PROXY = "http://localhost:1055"
+PROXY = "socks5://localhost:1055"
 
 
 class HomeAssistant:

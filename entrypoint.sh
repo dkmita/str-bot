@@ -16,7 +16,7 @@ git -C "$REPO_DIR" config user.name "STR Bot"
 git -C "$REPO_DIR" config user.email "d.kmita@gmail.com"
 
 # Join the tailnet in userspace mode (TAILSCALE=on in fly.toml). The bot reaches Home Assistant through Tailscale's
-# local HTTP proxy on localhost:1055; MagicDNS names resolve through it. Login: TS_AUTHKEY if set; otherwise the
+# local SOCKS5 proxy on localhost:1055; MagicDNS names resolve through it. Login: TS_AUTHKEY if set; otherwise the
 # first start prints a login link to /data/tailscale/login.log (open it in a browser to approve). The node's identity
 # is kept on the volume, so later restarts reconnect without logging in again.
 if [ "${TAILSCALE:-}" = "on" ] || [ -n "${TS_AUTHKEY:-}" ]; then
