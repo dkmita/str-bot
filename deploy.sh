@@ -25,7 +25,7 @@ for _ in $(seq 1 30); do
     echo "$recent"; echo "Bot crashed on startup"; exit 1
   fi
   if echo "$recent" | grep -q "Application started"; then
-    echo "$recent" | grep "Coach bot starting"; echo "Deployed and running"; exit 0
+    echo "$recent" | grep "STR bot starting"; echo "Deployed and running"; exit 0
   fi
   sleep 5
 done
