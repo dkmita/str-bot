@@ -44,7 +44,22 @@ VRBO_SUBJECTS = [  # from messages.homeaway.com / reviews.homeaway.com; everythi
 
 def _platform(sender: str) -> str | None:
     s = sender.lower()
+    if "getskimmer.com" in s:
+        return "Vortex"  # hot tub service (Vortex Pools & Spas, via the Skimmer app)
     return "Airbnb" if "airbnb.com" in s else "VRBO" if ("vrbo.com" in s or "homeaway.com" in s) else None
+
+
+VORTEX_ROUTINE = re.compile(r"invoice|payment|billing|portal|updating our", re.I)  # not a service visit
+
+
+def _vortex_notes(text: str) -> str:
+    """The technician's notes in a Skimmer work-order email (between the greeting and DATE COMPLETED)."""
+    body = re.split(r"DATE (?:COMPLETED|OF SERVICE)", text)[0]
+    body = body.split("needs attention or repair.", 1)[-1].split("Service Update", 1)[-1]
+    lines = [l.strip() for l in body.splitlines()]
+    lines = [l for l in lines if l and l not in ("Vortex Pools & Spas", "SKIMMER | Work Order Email")
+             and not l.startswith(("Hi ", "We noticed")) and not l.isdigit()]
+    return " · ".join(lines)[:500]
 
 
 def _thread_url(text: str) -> str | None:
@@ -109,6 +124,12 @@ def parse(email: dict) -> dict | None:
     subject = email["subject"].strip()
     base = {"id": email["id"], "platform": platform, "subject": subject, "date": email["date"],
             "thread_url": _thread_url(email["text"])}
+    if platform == "Vortex":
+        if "Service Report" in subject:
+            return base | {"kind": "service_report"}  # routine: checked by jobs.hot_tub_check, not shown
+        if VORTEX_ROUTINE.search(subject):
+            return None
+        return base | {"kind": "work_order", "notes": _vortex_notes(email["text"])}
     if platform == "VRBO":
         for kind, pattern in VRBO_SUBJECTS:
             if m := pattern.search(subject):
@@ -147,6 +168,10 @@ def wants_draft(item: dict) -> bool:
 def card(item: dict, tz) -> tuple[str, InlineKeyboardMarkup | None] | None:
     """Telegram text and buttons for a parsed email; None to skip (e.g. Leanne's own reply)."""
     kind, dates = item["kind"], item.get("dates", "")
+    if kind == "service_report":
+        return None
+    if kind == "work_order":
+        return f"🛁 Hot tub (Vortex): {item['subject']}" + (f"\n{item['notes']}" if item.get("notes") else ""), None
     guests = f" · {item['guests']}" if item.get("guests") else ""
     if kind == "message":
         from_guest = [b for b in item["messages"] if b["role"] not in HOST_ROLES]

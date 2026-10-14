@@ -58,6 +58,8 @@ def save(cfg, threads: dict) -> None:
 
 def record(threads: dict, item: dict) -> None:
     """Update thread state from one parsed notification email."""
+    if item["platform"] not in ("Airbnb", "VRBO"):
+        return  # hot tub service mail isn't a guest conversation
     kind, key = item["kind"], thread_key(item)
     t = threads.get(key)
     if kind in ("confirmed", "canceled", "review"):  # the conversation reached an outcome

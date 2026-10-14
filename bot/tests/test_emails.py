@@ -192,3 +192,25 @@ def test_wants_draft():
     answered = q | {"messages": q["messages"] + [{"name": "Leanne", "role": "Host", "text": "Yes!"}]}
     assert not emails.wants_draft(answered)
     assert emails.wants_draft({"kind": "inquiry"}) and not emails.wants_draft({"kind": "review"})
+
+
+REPAIR = """96
+ SKIMMER | Work Order Email
+ Hi Dominik,
+We noticed an item on your system that needs attention or repair.
+Vortex Pools & Spas
+ temp reading 108
+ temp set point 99
+ DATE COMPLETED
+ September 14, 2026 at 9:03 AM
+ LOCATION
+ 1 Example Trail"""
+
+
+def test_vortex_emails():
+    sender = '"Vortex Pools & Spas" <messages@appmail.getskimmer.com>'
+    assert emails.card(emails.parse(email("Repair Needed", REPAIR, sender)), TZ) == \
+        ("🛁 Hot tub (Vortex): Repair Needed\ntemp reading 108 · temp set point 99", None)
+    report = emails.parse(email("Pool/Spa Service Report for 10/12/2026", "", sender))
+    assert report["kind"] == "service_report" and emails.card(report, TZ) is None
+    assert emails.parse(email("Invoice 2939 is ready!", "", sender)) is None

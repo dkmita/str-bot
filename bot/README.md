@@ -14,6 +14,10 @@ Today it can:
   ✍️ Redraft and Open in Airbnb buttons; reminders repeat the suggestion;
   ✅ confirmations, ❌ cancellations and ⭐ reviews are one-liners. Leanne's own replies and routine mail are skipped;
   the first read of an inbox is a silent baseline.
+- Hot tub (Vortex Pools & Spas, emails via Skimmer to d.kmita): work orders (Repair Needed, Service Update, filter/
+  cover cleans) → Telegram with the technician's notes; weekly reports, invoices and payments stay silent. Daily
+  6pm check: no Vortex service email on Monday → alert; a late report that week → "arrived" note; still nothing
+  by Friday → second alert. Based only on Vortex's emails (the Sedona Home calendar events are hand-made).
 - 7am (Sedona time): check-outs, arrivals, same-day turnovers and tomorrow's arrivals, if any (no Claude)
 - Chat: questions about stays, drafts of guest replies from `property.md`, keeping notes up to date
 - `/usage [days]`: Claude spend report

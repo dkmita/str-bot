@@ -46,6 +46,7 @@ def build_app(cfg: config.Config) -> Application:
     q.run_repeating(jobs.watch, interval=jobs.WATCH_EVERY, first=60, name="booking_watch")
     q.run_repeating(emails.watch, interval=emails.CHECK_EVERY, first=45, name="email_watch")
     q.run_daily(jobs.morning, jobs.MORNING.replace(tzinfo=cfg.tz), name="morning")
+    q.run_daily(jobs.hot_tub_check, jobs.HOT_TUB_CHECK.replace(tzinfo=cfg.tz), name="hot_tub_check")
     q.run_repeating(health.check_job, interval=health.CHECK_EVERY, first=300, name="health_check")
     return app
 

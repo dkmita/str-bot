@@ -9,12 +9,14 @@ from telegram.ext import ContextTypes
 
 import chat
 import health
+from emails import VORTEX_ROUTINE
 from integrations import ical
 
 log = logging.getLogger("str")
 
 WATCH_EVERY = timedelta(hours=1)
 MORNING = time(7, 0)
+HOT_TUB_CHECK = time(18, 0)  # daily; Vortex's Monday report normally arrives between 9am and 3pm
 
 
 def diff(before: dict[str, dict], after: dict[str, dict], today: str) -> list[str]:
@@ -91,6 +93,53 @@ def morning_text(entries: list[dict], today: date) -> str | None:
         lines.append("↔️ Same-day turnover")
     lines += [f"📅 Arriving tomorrow: {ical.describe(s)}" for s in tomorrow]
     return "\n".join(lines) or None
+
+
+def hot_tub_status(today: date, mails: list[tuple[date, str]], state: dict) -> tuple[str | None, dict]:
+    """Vortex services the hot tub every Monday and emails a report (or work order) the same day. Only their emails
+    count (the calendar events are hand-made and don't follow reschedules).
+    `mails` = (day, subject) of this week's Vortex emails; `state` = {"week", "alerted", "arrived"}.
+    Monday: nothing yet → alert. Later: a report arrives after an alert → note it. Friday: nothing all week → alert."""
+    week = (today - timedelta(days=today.weekday())).isoformat()
+    state = state if state.get("week") == week else {"week": week, "alerted": [], "arrived": False}
+    visits = sorted(d for d, subject in mails if not VORTEX_ROUTINE.search(subject))
+    if visits:
+        if state["alerted"] and not state["arrived"]:
+            state["arrived"] = True
+            return f"✅ Hot tub: Vortex's report came in after all ({visits[-1]:%a %b %-d}).", state
+        return None, state
+    if today.weekday() == 0 and "mon" not in state["alerted"]:
+        state["alerted"].append("mon")
+        return ("🛁 No hot tub service report from Vortex today (Mon). They usually come Mondays and email by 3pm. "
+                "I'll tell you if it shows up later this week."), state
+    if today.weekday() == 4 and "fri" not in state["alerted"]:
+        state["alerted"].append("fri")
+        return "🛁 Still no hot tub service from Vortex this week (no report since Monday).", state
+    return None, state
+
+
+async def hot_tub_check(ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    cfg, inboxes = ctx.bot_data["cfg"], ctx.bot_data["inboxes"]
+    if not inboxes:
+        return
+    now = datetime.now(cfg.tz)
+    monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def this_weeks_mail() -> list[tuple[date, str]]:
+        q = f"from:getskimmer.com after:{int(monday.timestamp())}"
+        out = []
+        for ib in inboxes:
+            for i in ib.recent_ids(q):
+                m = ib.get(i)
+                out.append((datetime.fromtimestamp(m["date"] / 1000, cfg.tz).date(), m["subject"]))
+        return out
+    mails = await asyncio.to_thread(this_weeks_mail)
+    path = cfg.state_dir / "hot_tub.json"
+    text, state = hot_tub_status(now.date(), mails, json.loads(path.read_text()) if path.exists() else {})
+    path.write_text(json.dumps(state))
+    log.info("Hot tub check: %d Vortex email(s) this week%s", len(mails), "; alert sent" if text else "")
+    if text and cfg.allowed_chat_id is not None:
+        await chat.send(ctx.application, cfg.allowed_chat_id, text)
 
 
 async def morning(ctx: ContextTypes.DEFAULT_TYPE) -> None:

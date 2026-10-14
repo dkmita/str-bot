@@ -59,3 +59,19 @@ def test_morning_text():
                                  "↔️ Same-day turnover",
                                  "📅 Arriving tomorrow: Airbnb Sat Oct 24 → Mon Oct 26 (2 nights) · HMA3"]
     assert jobs.morning_text(entries, date(2026, 10, 20)) is None
+
+
+def test_hot_tub_check():
+    mon, tue, fri = date(2026, 10, 19), date(2026, 10, 20), date(2026, 10, 23)
+    text, st = jobs.hot_tub_status(mon, [], {})
+    assert text.startswith("🛁 No hot tub service report from Vortex today (Mon)")
+    assert jobs.hot_tub_status(mon, [], st)[0] is None                     # once
+    text, st = jobs.hot_tub_status(tue, [(tue, "Pool/Spa Service Report for 10/20/2026")], st)
+    assert text == "✅ Hot tub: Vortex's report came in after all (Tue Oct 20)."
+    assert jobs.hot_tub_status(fri, [(tue, "Pool/Spa Service Report for 10/20/2026")], st)[0] is None
+    # on time: silent all week; invoices don't count as a visit
+    assert jobs.hot_tub_status(mon, [(mon, "Pool/Spa Service Report for 10/19/2026")], {})[0] is None
+    _, st = jobs.hot_tub_status(mon, [(mon, "Invoice 2939 is ready!")], {})
+    assert jobs.hot_tub_status(fri, [(mon, "Invoice 2939 is ready!")], st)[0].startswith("🛁 Still no hot tub service")
+    # a new week starts fresh
+    assert jobs.hot_tub_status(date(2026, 10, 26), [], st)[0].startswith("🛁 No hot tub service report")
