@@ -18,6 +18,7 @@ Today it can:
   cover cleans) → Telegram with the technician's notes; weekly reports, invoices and payments stay silent. Daily
   6pm check: no Vortex service email on Monday → alert; a late report that week → "arrived" note; still nothing
   by Friday → second alert. Based only on Vortex's emails (the Sedona Home calendar events are hand-made).
+  The report's chemical READINGS are taken on arrival (before balancing), so don't alert on them.
 - 7am (Sedona time): check-outs, arrivals, same-day turnovers and tomorrow's arrivals, if any (no Claude)
 - Chat: questions about stays, drafts of guest replies from `property.md`, keeping notes up to date
 - `/usage [days]`: Claude spend report
