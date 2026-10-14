@@ -25,6 +25,12 @@ Telegram bot that helps me run my short-term rental in Sedona, AZ (listed on Air
 - Not connected yet: Home Assistant (door codes), sending guest messages, pricing (no public host APIs;
   likely via a channel manager such as Hospitable/OwnerRez/Hostaway or PriceLabs), cleaner email/WhatsApp.
 
+## Later
+- Drop the d.kmita@gmail.com inbox: Airbnb sends inquiries/requests/new bookings only there today (Oct 2026
+  check: 2 inquiries/requests + 1 booking in 30 days that leomproperty didn't get). Forward from:airbnb.com to
+  leomproperty (Gmail filter) or change Airbnb's notification email, then use only the leomproperty token
+  (it reads the Sedona Home calendar too) and remove the str-bot grant from d.kmita's Google account.
+
 ## Rules for any new capability
 - Anything that reaches guests, the listings, prices or the door lock is proposed with approve buttons first
   and applied by code after I tap Approve (same pattern as the coach's proposals).
