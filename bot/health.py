@@ -50,6 +50,8 @@ def _checks(app) -> dict:
     for inbox in app.bot_data["inboxes"]:
         checks[f"Gmail {inbox.label}"] = lambda inbox=inbox: inbox._svc.users().getProfile(userId="me").execute()["emailAddress"]
     checks["Claude API"] = lambda: _claude(agent)
+    if app.bot_data.get("ha"):
+        checks["Home Assistant (via Tailscale)"] = lambda: (lambda c: f"{c['location']} · HA {c['version']}")(app.bot_data["ha"].config())
     if cfg.git_push:
         checks["GitHub (notes push)"] = lambda: _git(cfg)
     checks["Disk"] = lambda: _disk(cfg)

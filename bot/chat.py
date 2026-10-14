@@ -68,6 +68,23 @@ async def on_stays(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await send(ctx.application, update.effective_chat.id, stays_text(entries, datetime.now(cfg.tz).date(), days))
 
 
+async def on_locks(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """/locks: lock states, door sensors and low batteries from Home Assistant (no Claude)."""
+    cfg = ctx.bot_data["cfg"]
+    if not is_allowed(cfg, update):
+        return
+    ha = ctx.bot_data.get("ha")
+    if not ha:
+        await update.message.reply_text("Home Assistant isn't connected yet (needs TS_AUTHKEY, HA_URL and HA_TOKEN).")
+        return
+    from integrations.homeassistant import locks_text
+    try:
+        text = locks_text(await asyncio.to_thread(ha.devices))
+    except Exception as e:
+        text = f"Couldn't reach Home Assistant: {type(e).__name__}: {e}"
+    await update.message.reply_text(text)
+
+
 async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     cfg = ctx.bot_data["cfg"]
     if not is_allowed(cfg, update):

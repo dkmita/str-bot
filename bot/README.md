@@ -23,6 +23,7 @@ Today it can:
 - Chat: questions about stays, drafts of guest replies from `property.md`, keeping notes up to date
 - `/usage [days]`: Claude spend report
 - `/health`: runs every check now (see Monitoring)
+- `/locks`: lock states, door sensors and low batteries from Home Assistant (read-only, over Tailscale)
 - Unanswered-message reminders (`inbox.py`, no Claude): threads from the notification emails; Leanne's reply, a
   booking/cancellation or ✅ Handled closes them. Inquiries/requests remind at 20 h and 23 h, other guest messages
   after 3 h (thank-yous skipped). VRBO doesn't email the host's replies, so VRBO threads need ✅ Handled.
@@ -41,6 +42,8 @@ Not yet: Home Assistant door codes, messaging and pricing on the platforms, clea
 | `LEOM_GOOGLE_REFRESH_TOKEN` | same client, signed in as leomproperty@gmail.com (VRBO mail); optional |
 | `AIRBNB_ICAL_URL` / `VRBO_ICAL_URL` | each platform's calendar export link (secret URLs) |
 | `GIT_SSH_KEY` | private half of the GitHub deploy key (write access) for dkmita/str-bot |
+| `TS_AUTHKEY` | Tailscale auth key (reusable + ephemeral): login.tailscale.com/admin/settings/keys |
+| `HA_URL` / `HA_TOKEN` | Home Assistant's tailnet address (e.g. `http://homeassistant:8123`) and a long-lived token of a dedicated non-admin HA user |
 | `HC_PING_URL` | healthchecks.io check "str-bot heartbeat": period 5 min, grace 10 min |
 | `HC_DEPS_PING_URL` | optional, not used (connection alerts go to Telegram) |
 

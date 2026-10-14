@@ -17,6 +17,7 @@ from agent import Agent
 from data.repo import Repo
 from integrations.gcal import Calendar
 from integrations.gmail import Inbox
+from integrations.homeassistant import HomeAssistant
 
 logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s: %(message)s", level=logging.INFO)
 for noisy in ("httpx", "apscheduler"):
@@ -30,12 +31,14 @@ def build_app(cfg: config.Config) -> Application:
     agent = Agent(cfg, calendar, Repo(cfg.repo_dir, push=cfg.git_push))
     app = Application.builder().token(cfg.telegram_token).post_init(ops.on_startup).build()
     inboxes = [Inbox(label, cfg.google_client_id, cfg.google_client_secret, tok) for label, tok in cfg.gmail_tokens.items()]
-    app.bot_data.update(cfg=cfg, calendar=calendar, agent=agent, inboxes=inboxes)
+    ha = HomeAssistant(cfg.ha_url, cfg.ha_token) if cfg.ha_url and cfg.ha_token else None
+    app.bot_data.update(cfg=cfg, calendar=calendar, agent=agent, inboxes=inboxes, ha=ha)
     app.add_handler(CommandHandler("start", chat.on_start))
     app.add_handler(CommandHandler("usage", chat.on_usage))
     app.add_handler(CommandHandler("stays", chat.on_stays))
     app.add_handler(CommandHandler("health", health.on_health))
     app.add_handler(CommandHandler("inbox", inbox.on_inbox))
+    app.add_handler(CommandHandler("locks", chat.on_locks))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.on_message))
     app.add_handler(CallbackQueryHandler(emails.on_button, pattern=r"^em\|"))
     app.add_handler(CallbackQueryHandler(inbox.on_button, pattern=r"^ib\|"))

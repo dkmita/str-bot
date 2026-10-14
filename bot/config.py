@@ -30,6 +30,8 @@ class Config:
     log_content: bool
     hc_ping_url: str | None
     hc_deps_ping_url: str | None  # healthchecks.io check for the 30-min connection checks
+    ha_url: str | None  # Home Assistant on the tailnet, e.g. http://homeassistant:8123
+    ha_token: str | None
 
     @property
     def state_dir(self) -> Path:
@@ -60,4 +62,6 @@ def load() -> Config:
         log_content=os.environ.get("LOG_CONTENT", "true").lower() == "true",
         hc_ping_url=os.environ.get("HC_PING_URL") or None,
         hc_deps_ping_url=os.environ.get("HC_DEPS_PING_URL") or None,
+        ha_url=os.environ.get("HA_URL") or None,
+        ha_token=os.environ.get("HA_TOKEN") or None,
     )

@@ -34,3 +34,11 @@ def test_host_md_is_read_only_for_the_bot(repo_dir):
     with pytest.raises(ValueError):
         repo.write("host.md", "x")
     assert repo.edit("property.md", "4pm", "3pm") == "Edited property.md"
+
+
+def test_locks_text():
+    from integrations.homeassistant import locks_text
+    d = {"locks": [{"name": "Garage side door", "state": "locked"}],
+         "doors": [{"name": "Front door", "state": "off"}],
+         "batteries": [{"name": "Garage lock battery", "level": 22.0}, {"name": "Front sensor", "level": 90.0}]}
+    assert locks_text(d) == "🏠 Sedona house\n🔒 Garage side door: locked\n✔️ closed · Front door\n🪫 Garage lock battery: 22%"
