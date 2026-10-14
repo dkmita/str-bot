@@ -222,7 +222,8 @@ async def watch(ctx: ContextTypes.DEFAULT_TYPE) -> None:
     log.info("Email watch: %d new notification email(s), %d sent", len(items), sent)
 
 
-def draft_prompt(item: dict) -> str:
+def draft_prompt(item: dict, voice: str = "") -> str:
+    """The Draft reply request. `voice` = notes/leanne-voice.md (inlined: saves a tool call per draft)."""
     if item["kind"] == "message":
         convo = "\n".join(f"{b['name']} ({b['role']}): {b['text']}" for b in item["messages"])
         about = f"a guest message on {item['platform']} (stay {item.get('dates')}, {item.get('guests') or 'guests ?'})"
@@ -230,9 +231,10 @@ def draft_prompt(item: dict) -> str:
         convo = f"{item.get('guest') or 'Guest'}: {item.get('body') or '(message not in the email)'}"
         about = (f"an {item['platform']} {'inquiry' if item['kind'] == 'inquiry' else 'booking request'} "
                  f"for {item.get('dates')} ({item.get('guests') or 'guests ?'})")
-    return (f"(Automated: I tapped Draft reply) Draft Leanne's reply to {about}. Check list_stays and property.md "
-            f"for facts. Give me only the reply text, ready to paste, then one line on anything you weren't sure "
-            f"about.\n\n{convo}")
+    style = f"\n\nHow Leanne writes (notes/leanne-voice.md):\n{voice.strip()}" if voice.strip() else ""
+    return (f"(Automated: I tapped Draft reply) Draft Leanne's reply to {about}. Use the Q&A in property.md for facts "
+            f"(read it) and list_stays for dates. Give me only the reply text, ready to paste, then one line on anything "
+            f"you weren't sure about or that's missing from property.md.{style}\n\n{convo}")
 
 
 async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -248,7 +250,9 @@ async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await q.answer("Drafting…")
     typing = asyncio.create_task(chat.keep_typing(ctx, cfg.allowed_chat_id))
     try:
-        reply = await ctx.bot_data["agent"].respond(draft_prompt(item), source="draft")
+        voice_file = cfg.repo_dir / "notes" / "leanne-voice.md"
+        voice = voice_file.read_text() if voice_file.exists() else ""
+        reply = await ctx.bot_data["agent"].respond(draft_prompt(item, voice), source="draft")
     finally:
         typing.cancel()
     await chat.send(ctx.application, cfg.allowed_chat_id, reply)

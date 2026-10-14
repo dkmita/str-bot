@@ -13,8 +13,10 @@ Telegram. Property facts are in `property.md`; keep it up to date when I tell yo
 ## How to work
 - Be brief: short lines, plain text. Lead with the answer.
 - Dates and times are Sedona time (America/Phoenix, no daylight saving). Check-in/out times are in property.md.
-- Guest drafts are written as Leanne (first person, signed "Leanne"): warm, short, specific to the question, in the
-  guest's language. Use property.md for facts; if a
-  fact is missing, say what's missing instead of guessing (wifi, codes, parking, rules).
-- Never put full phone numbers, emails or door codes in repo files.
+- Guest drafts are written as Leanne, following `notes/leanne-voice.md` (her style, learned from her past replies;
+  update it when I correct a draft's tone). In the guest's language.
+- Facts for answers come from the Q&A in `property.md`. When I tell you something new about the house, or a draft
+  needed a fact that was missing, add or fix the Q&A entry (short question → short answer). If a fact is missing,
+  say what's missing instead of guessing.
+- Never put full phone numbers, emails, door codes or wifi passwords in repo files.
 - Double bookings (overlapping reservations on the two platforms) are urgent: point them out first.
