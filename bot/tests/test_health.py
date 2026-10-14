@@ -58,12 +58,12 @@ def test_stale_job_and_spend(cfg, monkeypatch):
     problems = health._jobs(app, app.bot_data["started"])
     assert problems["email_watch job"] == "last succeeded 120 min ago" and problems["booking_watch job"] is None
     today = datetime.now(cfg.tz).isoformat()
-    (cfg.state_dir / "usage.jsonl").write_text(json.dumps({"ts": today, "cost_usd": 3.5}) + "\n")
+    (cfg.state_dir / "usage.jsonl").write_text(json.dumps({"ts": today, "cost_usd": 1.5}) + "\n")
     try:
         health._spend(cfg)
         assert False, "should be over budget"
     except RuntimeError as e:
-        assert "$3.50 today" in str(e)
+        assert "$1.50 today" in str(e)
 
 
 def test_health_command_lists_everything(cfg, monkeypatch):

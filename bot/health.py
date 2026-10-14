@@ -25,7 +25,7 @@ log = logging.getLogger("str")
 
 CHECK_EVERY = timedelta(minutes=30)
 ALERT_AFTER = 2  # consecutive failures
-DAILY_BUDGET_USD = 3.0
+DAILY_BUDGET_USD = 1.0  # normal use is a few cents to ~50¢ a day; this catches runaways
 MIN_FREE_MB = 100
 # job → longest acceptable time since its last successful run
 JOB_MAX_AGE = {"email_watch": timedelta(minutes=30), "booking_watch": timedelta(hours=3)}

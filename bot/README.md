@@ -39,7 +39,7 @@ Not yet: Home Assistant door codes, messaging and pricing on the platforms, clea
 - **Running + Telegram**: heartbeat every 5 min to healthchecks.io (`HC_PING_URL`), sent only if Telegram answers;
   healthchecks.io emails me if pings stop. A crash also pings `/fail` (entrypoint.sh); Fly restarts the machine.
 - **Connections and jobs** (`health.py`, every 30 min): Airbnb/VRBO feeds, Google Calendar, each Gmail inbox, Claude
-  API (free model lookup), GitHub push (deploy key; unpushed notes over 1 h), disk space, Claude spend over $3/day,
+  API (free model lookup), GitHub push (deploy key; unpushed notes over 1 h), disk space, Claude spend over $1/day,
   and whether the email/booking watches succeeded recently. Two failures in a row → Telegram alert, then a recovery
   note. Results also go to a second healthchecks.io check (`HC_DEPS_PING_URL`: success, or `/fail` with the list),
   so a broken Telegram still reaches me by email.
