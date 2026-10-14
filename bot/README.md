@@ -17,6 +17,10 @@ Today it can:
 - Chat: questions about stays, drafts of guest replies from `property.md`, keeping notes up to date
 - `/usage [days]`: Claude spend report
 - `/health`: runs every check now (see Monitoring)
+- Unanswered-message reminders (`inbox.py`, no Claude): threads from the notification emails; Leanne's reply, a
+  booking/cancellation or ✅ Handled closes them. Inquiries/requests remind at 20 h and 23 h, other guest messages
+  after 3 h (thank-yous skipped). VRBO doesn't email the host's replies, so VRBO threads need ✅ Handled.
+  `/inbox`: everyone waiting for an answer, both platforms.
 
 Not yet: Home Assistant door codes, messaging and pricing on the platforms, cleaner email/WhatsApp (see CLAUDE.md).
 
@@ -72,6 +76,7 @@ bot/
 ├── config.py          # settings from environment variables
 ├── data/              # repo.py (sandboxed .md files + git), usage.py (cost log)
 ├── emails.py          # notification emails → Telegram cards, Draft reply button
+├── inbox.py           # conversation threads, unanswered reminders, /inbox
 ├── integrations/      # ical.py (Airbnb/VRBO feeds, double bookings), gcal.py (Sedona Home calendar),
 │                      # gmail.py (read-only inboxes)
 ├── tests/             # pytest: feeds, booking watch, morning note, prompt/tool snapshots

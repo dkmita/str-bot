@@ -10,6 +10,7 @@ import chat
 import config
 import emails
 import health
+import inbox
 import jobs
 import ops
 from agent import Agent
@@ -34,8 +35,10 @@ def build_app(cfg: config.Config) -> Application:
     app.add_handler(CommandHandler("usage", chat.on_usage))
     app.add_handler(CommandHandler("stays", chat.on_stays))
     app.add_handler(CommandHandler("health", health.on_health))
+    app.add_handler(CommandHandler("inbox", inbox.on_inbox))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.on_message))
     app.add_handler(CallbackQueryHandler(emails.on_button, pattern=r"^em\|"))
+    app.add_handler(CallbackQueryHandler(inbox.on_button, pattern=r"^ib\|"))
     app.add_error_handler(ops.on_error)
 
     q = app.job_queue

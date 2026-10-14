@@ -89,7 +89,7 @@ A: Yes, with separate units for the main living area and the master suite.
 A: No. First-time bookings stay on Airbnb.
 
 **Q:** Do you offer discounts?
-A: There are no advance discounts. A last-minute discount may appear about two weeks out if dates are open (as of Oct 2026), but not on confirmed bookings.
+A: There are no advance discounts. On Airbnb the price drops automatically within two weeks of open dates (Airbnb pricing setting), but not on confirmed bookings.
 
 **Q:** What is the cleaning fee?
 A: $285 (as of Oct 2026).

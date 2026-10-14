@@ -41,7 +41,7 @@ check(cfg.allowed_chat_id is not None, "TELEGRAM_ALLOWED_CHAT_ID is set")
 check(bool(cfg.feeds), f"reservation feeds: {', '.join(sorted(cfg.feeds)) or 'none'}")
 check(cfg.model in usage.PRICES, f"price table has {cfg.model}")
 commands = {c for h in app.handlers.get(0, []) for c in getattr(h, "commands", ())}
-check({"start", "usage", "stays", "health"} <= commands, f"commands registered: {sorted(commands)}")
+check({"start", "usage", "stays", "health", "inbox"} <= commands, f"commands registered: {sorted(commands)}")
 
 if "--live" in sys.argv:
     from integrations import ical
