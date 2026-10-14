@@ -124,11 +124,12 @@ def keyboard(t: dict) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-def reminder_text(t: dict, label: str) -> str:
+def reminder_text(t: dict, label: str, draft: str | None = None) -> str:
+    suggestion = f"\n\n✍️ Suggested reply:\n{draft[:2500]}" if draft else ""
     vrbo = "\n(VRBO doesn't email Leanne's replies; tap ✅ Handled if she already answered.)" if t["platform"] == "VRBO" else ""
     what = "Inquiry" if t["kind"] == "inquiry" else "Message"
     return (f"⏰ {what} from {t['guest']} unanswered, {label} · {t['platform']}{' · ' + t['dates'] if t.get('dates') else ''}"
-            f"\n\"{t['text'][:300]}\"{vrbo}")
+            f"\n\"{t['text'][:300]}\"{vrbo}{suggestion}")
 
 
 async def after_email_scan(ctx: ContextTypes.DEFAULT_TYPE, items: list[dict]) -> None:
@@ -141,9 +142,13 @@ async def after_email_scan(ctx: ContextTypes.DEFAULT_TYPE, items: list[dict]) ->
     reminders = due_reminders(threads, now_ms)
     prune(threads, now_ms)
     save(cfg, threads)
+    drafts = {i["id"]: i.get("draft") for i in items}
+    stored = json.loads((cfg.state_dir / "emails.json").read_text()).get("items", {}) \
+        if (cfg.state_dir / "emails.json").exists() else {}
     for t, label in reminders:
+        draft = drafts.get(t["item_id"]) or stored.get(t["item_id"], {}).get("draft")
         if cfg.allowed_chat_id is not None:
-            await ctx.bot.send_message(cfg.allowed_chat_id, reminder_text(t, label), reply_markup=keyboard(t))
+            await ctx.bot.send_message(cfg.allowed_chat_id, reminder_text(t, label, draft), reply_markup=keyboard(t))
     if reminders:
         log.info("Inbox: %d reminder(s) sent", len(reminders))
 

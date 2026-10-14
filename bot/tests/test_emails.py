@@ -182,3 +182,13 @@ def test_scan_baseline_then_new_mail(cfg):
     inbox.mail["n2"] = email("Sam left a 5-star review!", "") | {"id": "n2"}
     other.mail["x2"] = email("Sam left a 5-star review!", "") | {"id": "x2", "date": T0 + 60_000}
     assert [i["id"] for i in emails.scan(cfg, [inbox, other], state)] == ["n2"]
+
+
+def test_wants_draft():
+    q = emails.parse(email("RE: Reservation for Luxury Hilltop Home With 360° Red Rock Views, Oct 9 – 16", MESSAGE))
+    assert emails.wants_draft(q) and emails.card(q, TZ)[1].inline_keyboard[0][0].text == "✍️ Redraft"
+    thanks = q | {"messages": [{"name": "Dana", "role": "Booker", "text": "Perfect! Thanks"}]}
+    assert not emails.wants_draft(thanks) and emails.card(thanks, TZ)[1].inline_keyboard[0][0].text == "✍️ Draft reply"
+    answered = q | {"messages": q["messages"] + [{"name": "Leanne", "role": "Host", "text": "Yes!"}]}
+    assert not emails.wants_draft(answered)
+    assert emails.wants_draft({"kind": "inquiry"}) and not emails.wants_draft({"kind": "review"})

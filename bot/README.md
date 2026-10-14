@@ -9,8 +9,9 @@ Today it can:
 - Hourly booking watch: new, changed and cancelled stays, and 🚨 double bookings (no Claude). The first read
   is a silent baseline; a failed feed, or one that suddenly shows no future stays, is skipped instead of being
   read as cancellations.
-- Every 5 min: Airbnb/VRBO notification emails → Telegram (no Claude): 💬 guest messages and ⏳ inquiries/requests
-  (with the 24 h deadline) get ✍️ Draft reply (Claude, as Leanne, only when tapped) and Open in Airbnb buttons;
+- Every 5 min: Airbnb/VRBO notification emails → Telegram: 💬 guest messages and ⏳ inquiries/requests
+  (with the 24 h deadline) get a suggested reply right away (Claude, as Leanne, ~9¢; thank-yous skipped),
+  ✍️ Redraft and Open in Airbnb buttons; reminders repeat the suggestion;
   ✅ confirmations, ❌ cancellations and ⭐ reviews are one-liners. Leanne's own replies and routine mail are skipped;
   the first read of an inbox is a silent baseline.
 - 7am (Sedona time): check-outs, arrivals, same-day turnovers and tomorrow's arrivals, if any (no Claude)

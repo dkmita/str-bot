@@ -66,3 +66,8 @@ def test_inbox_text_and_prune():
     assert "Dana · Airbnb · Oct 9 – 16 · 5h ago" in inbox.inbox_text(threads, T0 + 5 * H, None)
     inbox.prune(threads, T0 + 15 * 24 * H)
     assert threads == {} and inbox.inbox_text(threads, T0, None) == "📥 Inbox: nobody is waiting for an answer."
+
+
+def test_reminder_includes_draft():
+    t = {"guest": "Dana", "kind": "message", "platform": "Airbnb", "dates": "Oct 9 – 16", "text": "Is there a grill?"}
+    assert inbox.reminder_text(t, "waiting 3 h", "Hi Dana - yes!").endswith("✍️ Suggested reply:\nHi Dana - yes!")

@@ -1,7 +1,7 @@
 """Airbnb/VRBO notification emails → short Telegram messages, sorted by code (no Claude).
 
-Guest messages and inquiries get a ✍️ Draft reply button (Claude writes it as Leanne, only when tapped) and an
-"Open in Airbnb" link. Leanne's own replies (role "Host") and routine mail are skipped. The first read of an
+Guest messages that need an answer, inquiries and booking requests get a suggested reply right away (Claude, as
+Leanne; ~9¢ each, thank-yous skipped), sent as a reply to the card, plus ✍️ Redraft and "Open in Airbnb" buttons. Leanne's own replies (role "Host") and routine mail are skipped. The first read of an
 inbox is a silent baseline, so turning this on doesn't replay old mail.
 """
 
@@ -15,6 +15,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 import chat
+import inbox
 
 log = logging.getLogger("str")
 
@@ -132,6 +133,17 @@ def _details(kind: str, text: str) -> dict:
     return {}
 
 
+def wants_draft(item: dict) -> bool:
+    """Draft automatically for inquiries/requests and guest messages that need an answer."""
+    if item["kind"] in ("inquiry", "request"):
+        return True
+    msgs = item.get("messages", []) if item["kind"] == "message" else []
+    if not msgs or msgs[-1]["role"] in HOST_ROLES:
+        return False
+    last_host = max((i for i, b in enumerate(msgs) if b["role"] in HOST_ROLES), default=-1)
+    return inbox.needs_reply(" ".join(b["text"] for b in msgs[last_host + 1:]))
+
+
 def card(item: dict, tz) -> tuple[str, InlineKeyboardMarkup | None] | None:
     """Telegram text and buttons for a parsed email; None to skip (e.g. Leanne's own reply)."""
     kind, dates = item["kind"], item.get("dates", "")
@@ -156,7 +168,7 @@ def card(item: dict, tz) -> tuple[str, InlineKeyboardMarkup | None] | None:
     else:  # review
         stars = f" a {item['stars']}-star review" if item.get("stars") else " a review"
         return f"⭐ {item['guest']} left{stars} on {item['platform']}", None
-    rows = [[InlineKeyboardButton("✍️ Draft reply", callback_data=f"em|d|{item['id']}")]]
+    rows = [[InlineKeyboardButton("✍️ Redraft" if wants_draft(item) else "✍️ Draft reply", callback_data=f"em|d|{item['id']}")]]
     if item.get("thread_url"):
         rows[0].append(InlineKeyboardButton(f"Open in {item['platform']}", url=item["thread_url"]))
     return text, InlineKeyboardMarkup(rows)
@@ -216,10 +228,11 @@ async def watch(ctx: ContextTypes.DEFAULT_TYPE) -> None:
         state["items"][item["id"]] = item
         shown = card(item, cfg.tz)
         if shown and cfg.allowed_chat_id is not None:
-            await ctx.bot.send_message(cfg.allowed_chat_id, shown[0], reply_markup=shown[1])
+            msg = await ctx.bot.send_message(cfg.allowed_chat_id, shown[0], reply_markup=shown[1])
             sent += 1
+            if wants_draft(item):
+                item["draft"] = await _draft(ctx, item, reply_to=msg.message_id)
     _save(cfg, state)
-    import inbox  # local imports: both import chat, which this module also uses
     await inbox.after_email_scan(ctx, items)
     import health
     health.job_ok(ctx.bot_data, "email_watch")
@@ -236,9 +249,24 @@ def draft_prompt(item: dict, voice: str = "") -> str:
         about = (f"an {item['platform']} {'inquiry' if item['kind'] == 'inquiry' else 'booking request'} "
                  f"for {item.get('dates')} ({item.get('guests') or 'guests ?'})")
     style = f"\n\nHow Leanne writes (notes/leanne-voice.md):\n{voice.strip()}" if voice.strip() else ""
-    return (f"(Automated: I tapped Draft reply) Draft Leanne's reply to {about}. Use the Q&A in property.md for facts "
+    return (f"(Automated draft request) Draft Leanne's reply to {about}. Use the Q&A in property.md for facts "
             f"(read it) and list_stays for dates. Give me only the reply text, ready to paste, then one line on anything "
             f"you weren't sure about or that's missing from property.md.{style}\n\n{convo}")
+
+
+async def _draft(ctx: ContextTypes.DEFAULT_TYPE, item: dict, reply_to: int | None = None) -> str | None:
+    """Claude drafts Leanne's reply and it's sent to the chat (as a reply to the card if given). Never raises."""
+    cfg = ctx.bot_data["cfg"]
+    voice_file = cfg.repo_dir / "notes" / "leanne-voice.md"
+    voice = voice_file.read_text() if voice_file.exists() else ""
+    try:
+        draft = await ctx.bot_data["agent"].respond(draft_prompt(item, voice), source="draft")
+    except Exception:
+        log.exception("Drafting a reply failed")
+        return None
+    await ctx.bot.send_message(cfg.allowed_chat_id, "✍️ Suggested reply:\n\n" + draft[:3900],
+                               reply_to_message_id=reply_to)
+    return draft
 
 
 async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -254,9 +282,11 @@ async def on_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     await q.answer("Drafting…")
     typing = asyncio.create_task(chat.keep_typing(ctx, cfg.allowed_chat_id))
     try:
-        voice_file = cfg.repo_dir / "notes" / "leanne-voice.md"
-        voice = voice_file.read_text() if voice_file.exists() else ""
-        reply = await ctx.bot_data["agent"].respond(draft_prompt(item, voice), source="draft")
+        draft = await _draft(ctx, item, reply_to=q.message.message_id)
     finally:
         typing.cancel()
-    await chat.send(ctx.application, cfg.allowed_chat_id, reply)
+    if draft:
+        state = _load(cfg)
+        if msg_id in state["items"]:
+            state["items"][msg_id]["draft"] = draft
+            _save(cfg, state)
