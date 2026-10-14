@@ -1,0 +1,10 @@
+.env
+.env.*
+*.local.md
+.claude/settings.local.json
+.DS_Store
+!.env.example
+.state/
+.venv/
+__pycache__/
+.pytest_cache/

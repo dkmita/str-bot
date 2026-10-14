@@ -1,0 +1,22 @@
+# Fly.io config for the short-term-rental bot.
+app = "dkmita-str-bot"
+primary_region = "dfw"
+
+[env]
+  GIT_REPO_URL = "git@github.com:dkmita/str-bot.git"
+  PROPERTY_TIMEZONE = "America/Phoenix"
+
+# Persistent disk for the repo clone and state (conversations, last-seen bookings, usage log).
+[mounts]
+  source = "str_data"
+  destination = "/data"
+
+# Restart the bot if it crashes (Fly's default leaves a crashed machine stopped).
+[[restart]]
+  policy = "on-failure"
+  retries = 10
+
+# No [http_service]: the bot only makes outbound connections (Telegram polling).
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
