@@ -1,10 +1,12 @@
 # Property: Sedona Home
 
+Airbnb listing title: "Luxury Hilltop Home With 360° Red Rock Views" (entire home). Primary host: Leanne.
+
 _Facts the assistant uses for guest answers. Fill in or tell the bot to update._
 
 ## Basics
 - Address: (fill in)
-- Check-in: (time) · Check-out: (time)
+- Check-in: 4:00 PM · Check-out: 10:00 AM (from Airbnb reservation emails)
 - Max guests: (n) · Bedrooms/beds: (fill in)
 - Listings: Airbnb (fill in link) · VRBO (fill in link)
 

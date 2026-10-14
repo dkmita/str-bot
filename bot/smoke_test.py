@@ -36,7 +36,7 @@ check(not unhandled, f"every tool has a handler {unhandled or ''}")
 check(agent.system.startswith("# STR Host Assistant") and "Running as a Telegram bot" in agent.system,
       "system prompt = host.md + telegram.md")
 jobs = sorted(j.name for j in app.job_queue.jobs())
-check({"heartbeat", "booking_watch", "morning"} <= set(jobs), f"scheduled jobs: {', '.join(jobs)}")
+check({"heartbeat", "booking_watch", "email_watch", "morning"} <= set(jobs), f"scheduled jobs: {', '.join(jobs)}")
 check(cfg.allowed_chat_id is not None, "TELEGRAM_ALLOWED_CHAT_ID is set")
 check(bool(cfg.feeds), f"reservation feeds: {', '.join(sorted(cfg.feeds)) or 'none'}")
 check(cfg.model in usage.PRICES, f"price table has {cfg.model}")
@@ -52,5 +52,8 @@ if "--live" in sys.argv:
     now = datetime.now(cfg.tz)
     events = agent.calendar.list_events(now.isoformat(), (now + timedelta(days=14)).isoformat())
     check(True, f"Google Calendar (Sedona Home): {len(events)} events in the next 2 weeks")
+    for inbox in app.bot_data["inboxes"]:
+        check(True, f"Gmail {inbox.label}: {len(inbox.recent_ids('from:(airbnb.com OR vrbo.com) newer_than:30d'))} "
+                    "platform emails in 30 days")
 
 print("All checks passed")

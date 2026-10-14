@@ -17,9 +17,12 @@ Telegram bot that helps me run my short-term rental in Sedona, AZ (listed on Air
 ## Data sources
 - Reservations: the Airbnb and VRBO iCal export feeds (`AIRBNB_ICAL_URL`, `VRBO_ICAL_URL`; secret URLs, keep them
   out of the repo). Fresher than Google's imported copy of the Airbnb feed, which can lag by up to a day.
+- Gmail (read-only, the bot's own token): Airbnb notification mail goes to d.kmita@gmail.com; VRBO's to
+  leomproperty@gmail.com (a second token, `LEOM_GOOGLE_REFRESH_TOKEN`). Guest messages can be answered by replying
+  to Airbnb's email (Reply-To …@reply.airbnb.com): a possible Send path later (needs gmail.send + approve buttons).
 - Google Calendar (personal account d.kmita@gmail.com, read-only here): "Sedona Home" (`leomproperty@gmail.com`:
   hot tub maintenance etc.). From Claude Code use `gog ... -a d.kmita@gmail.com --client personal`.
-- Not connected yet: Home Assistant (door codes), Airbnb/VRBO messaging and pricing (no public host APIs;
+- Not connected yet: Home Assistant (door codes), sending guest messages, pricing (no public host APIs;
   likely via a channel manager such as Hospitable/OwnerRez/Hostaway or PriceLabs), cleaner email/WhatsApp.
 
 ## Rules for any new capability

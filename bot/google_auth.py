@@ -1,4 +1,4 @@
-"""One-time helper: sign in as the personal Google account and print a refresh token.
+"""One-time helper: sign in as the personal Google account and print a refresh token (scopes: integrations/gcal.py).
 
 Usage (from the repo root):
     .venv/bin/python bot/google_auth.py ~/Downloads/client_secret_*.json

@@ -9,7 +9,9 @@ from googleapiclient.discovery import build
 
 from config import Config
 
-SCOPES = ["https://www.googleapis.com/auth/calendar"]  # same refresh token as the coach bot
+# The bot's own token (bot/google_auth.py): read-only Calendar (Sedona Home) and read-only Gmail
+# (Airbnb/VRBO notification emails). It can't change the calendar or send email.
+SCOPES = ["https://www.googleapis.com/auth/calendar.readonly", "https://www.googleapis.com/auth/gmail.readonly"]
 RETRIES = 3
 
 

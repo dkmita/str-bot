@@ -9,6 +9,10 @@ Today it can:
 - Hourly booking watch: new, changed and cancelled stays, and 🚨 double bookings (no Claude). The first read
   is a silent baseline; a failed feed, or one that suddenly shows no future stays, is skipped instead of being
   read as cancellations.
+- Every 5 min: Airbnb/VRBO notification emails → Telegram (no Claude): 💬 guest messages and ⏳ inquiries/requests
+  (with the 24 h deadline) get ✍️ Draft reply (Claude, as Leanne, only when tapped) and Open in Airbnb buttons;
+  ✅ confirmations, ❌ cancellations and ⭐ reviews are one-liners. Leanne's own replies and routine mail are skipped;
+  the first read of an inbox is a silent baseline.
 - 7am (Sedona time): check-outs, arrivals, same-day turnovers and tomorrow's arrivals, if any (no Claude)
 - Chat: questions about stays, drafts of guest replies from `property.md`, keeping notes up to date
 - `/usage [days]`: Claude spend report
@@ -22,7 +26,8 @@ Not yet: Home Assistant door codes, messaging and pricing on the platforms, clea
 | `TELEGRAM_BOT_TOKEN` | @BotFather (bot @LeomProperyBot) |
 | `TELEGRAM_ALLOWED_CHAT_ID` | my Telegram user ID (same as the coach bot's) |
 | `ANTHROPIC_API_KEY` | console.anthropic.com (currently the coach's key) |
-| `GOOGLE_CLIENT_ID` / `_SECRET` / `_REFRESH_TOKEN` | same personal Google sign-in as the coach bot |
+| `GOOGLE_CLIENT_ID` / `_SECRET` / `_REFRESH_TOKEN` | the bot's own Desktop OAuth client "str-bot" + d.kmita@gmail.com sign-in (`bot/google_auth.py`): read-only Calendar + Gmail |
+| `LEOM_GOOGLE_REFRESH_TOKEN` | same client, signed in as leomproperty@gmail.com (VRBO mail); optional |
 | `AIRBNB_ICAL_URL` / `VRBO_ICAL_URL` | each platform's calendar export link (secret URLs) |
 | `GIT_SSH_KEY` | private half of the GitHub deploy key (write access) for dkmita/str-bot |
 | `HC_PING_URL` | optional: healthchecks.io check, 5 min period |
@@ -52,7 +57,9 @@ bot/
 ├── prompts/telegram.md# bot-specific instructions appended to host.md
 ├── config.py          # settings from environment variables
 ├── data/              # repo.py (sandboxed .md files + git), usage.py (cost log)
-├── integrations/      # ical.py (Airbnb/VRBO feeds, double bookings), gcal.py (Sedona Home calendar)
+├── emails.py          # notification emails → Telegram cards, Draft reply button
+├── integrations/      # ical.py (Airbnb/VRBO feeds, double bookings), gcal.py (Sedona Home calendar),
+│                      # gmail.py (read-only inboxes)
 ├── tests/             # pytest: feeds, booking watch, morning note, prompt/tool snapshots
 └── smoke_test.py      # builds the bot with real settings (--live reads the feeds and calendar)
 ```

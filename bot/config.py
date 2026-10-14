@@ -25,6 +25,7 @@ class Config:
     google_refresh_token: str
     property_calendar_ids: list[str]
     feeds: dict[str, str]  # platform → iCal export URL (secret)
+    gmail_tokens: dict[str, str]  # inbox label → refresh token (read-only; same OAuth client)
     git_push: bool
     log_content: bool
     hc_ping_url: str | None
@@ -50,6 +51,10 @@ def load() -> Config:
         # "Sedona Home" (hot tub maintenance etc.); read-only
         property_calendar_ids=os.environ.get("PROPERTY_CALENDAR_IDS", "leomproperty@gmail.com").split(","),
         feeds=feeds,
+        # Airbnb mail goes to d.kmita@gmail.com (the main token); VRBO's to leomproperty@gmail.com (its own sign-in)
+        gmail_tokens={label: tok for label, tok in (("d.kmita", os.environ.get("GOOGLE_REFRESH_TOKEN")),
+                                                     ("leomproperty", os.environ.get("LEOM_GOOGLE_REFRESH_TOKEN")))
+                      if tok},
         git_push=os.environ.get("GIT_PUSH", "false").lower() == "true",
         log_content=os.environ.get("LOG_CONTENT", "true").lower() == "true",
         hc_ping_url=os.environ.get("HC_PING_URL") or None,
