@@ -6,13 +6,14 @@ changes are committed to git. Infrastructure copied from `~/workout-coach` (same
 
 Today it can:
 - `/stays [days]`: upcoming reservations from both platforms, plus any double bookings (no Claude)
-- Hourly booking watch: new, changed and cancelled stays, and 🚨 double bookings (no Claude). The first read
+- Hourly booking watch: new stays and 🚨 double bookings (no Claude). Date changes and cancellations aren't
+  announced (the platforms already tell me). The first read
   is a silent baseline; a failed feed, or one that suddenly shows no future stays, is skipped instead of being
   read as cancellations.
 - Every 5 min: Airbnb/VRBO notification emails → Telegram: 💬 guest messages and ⏳ inquiries/requests
   (with the 24 h deadline) get a suggested reply right away (Claude, as Leanne, ~9¢; thank-yous skipped),
   ✍️ Redraft and Open in Airbnb buttons; reminders repeat the suggestion;
-  ✅ confirmations, ❌ cancellations and ⭐ reviews are one-liners. Leanne's own replies and routine mail are skipped;
+  ✅ confirmations and ⭐ reviews are one-liners (cancellations are silent). Leanne's own replies and routine mail are skipped;
   the first read of an inbox is a silent baseline.
 - Hot tub (Vortex Pools & Spas, emails via Skimmer to d.kmita): work orders (Repair Needed, Service Update, filter/
   cover cleans) → Telegram with the technician's notes; weekly reports, invoices and payments stay silent. Daily
@@ -27,7 +28,7 @@ Today it can:
 - Guest door codes (`doorcodes.py`, every 15 min, no Claude): a week before check-in the bot reserves a free Keymaster
   slot on the garage lock ("Oct 18 Sonya", arrival 10:00 AM → checkout noon) with a random placeholder PIN and asks
   you can replace (✏️ Set PIN, or in HA; planned: the guest's phone last-4, automatically). 15 min after the window opens it checks Keymaster synced it to the lock; an hour after it ends it resets
-  the slot. Cancelled/moved stays reset or move the slot. Permanent codes (Owners, Cleaners, ...) are never touched;
+  the slot. Cancelled/moved stays reset or move the slot quietly (no message). Permanent codes (Owners, Cleaners, ...) are never touched;
   hand-made guest slots are adopted. `/codes` lists them.
 - Unanswered-message reminders (`inbox.py`, no Claude): threads from the notification emails; Leanne's reply, a
   booking/cancellation or ✅ Handled closes them. Inquiries/requests remind at 20 h and 23 h, other guest messages

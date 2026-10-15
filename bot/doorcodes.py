@@ -5,7 +5,7 @@
   me (✏️ Set PIN, or in Home Assistant). Planned: use the last 4 digits of the guest's phone (Airbnb's iCal has them;
   VRBO's booking email has the number) so no manual step is needed.
 - 15 min after the window opens: check Keymaster synced the code to the lock. An hour after it ends: reset the slot.
-- Cancelled or moved stays: the slot is reset or its window moved.
+- Cancelled or moved stays: the slot is reset or its window moved, without a message (failures are still reported).
 Only guest slots are used: empty ones, or ones with date-range limits. Permanent codes (Owners, Cleaners, ...) are
 never touched. PINs aren't logged or stored (only a hash of the placeholder, to tell when it's been replaced).
 """
@@ -181,17 +181,15 @@ def step(state: dict, stays: list[dict], slots: dict[int, dict], now: datetime, 
         if stay is None and start > now:
             if not attempt(out, lambda: reset_slot(ha, c["slot"]), f"⚠️ Couldn't remove the code in slot {c['slot']}"):
                 continue
-            c["status"] = "removed"
-            out.append((f"🧹 {c['guest']}'s stay ({c['name']}) is gone from the calendar, so I removed its garage code "
-                        f"(slot {c['slot']}).", None))
+            c["status"] = "removed"  # silent: I hear about cancellations from the platforms
+            log.info("Door codes: stay %s cancelled, slot %d reset", c["name"], c["slot"])
         elif stay is not None and (stay["check_in"], stay["check_out"]) != (c["check_in"], c.get("check_out")):
             new_start, new_end = window(stay, tz)  # the booking's dates changed
             if attempt(out, lambda: write_slot(ha, c["slot"], c["name"], None, new_start, new_end),
                        f"⚠️ Couldn't move {c['guest']}'s garage code to the new dates (slot {c['slot']})"):
                 c.update(start=new_start.isoformat(), end=new_end.isoformat(), check_in=stay["check_in"],
-                         check_out=stay["check_out"])
-                out.append((f"📅 {c['guest']}'s dates changed; the garage code now works "
-                            f"{new_start:%a %b %-d %-I:%M %p} → {new_end:%a %b %-d %-I:%M %p}.", None))
+                         check_out=stay["check_out"])  # silent, like the cancellation case
+                log.info("Door codes: %s moved to %s → %s", c["name"], new_start, new_end)
 
     # reserve slots a week ahead
     covered = {c.get("check_in") for c in codes.values() if c["status"] != "removed"}

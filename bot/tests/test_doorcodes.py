@@ -96,9 +96,7 @@ def test_full_lifecycle():
 
     stays2 = [s for s in stays if s["uid"] != "d"]
     stays2[2] = stay("c", "2026-10-18", "2026-10-22")  # Maya leaves a day early
-    msgs = [m for m, _ in run(state, stays2, ha, at(2026, 10, 17, 13))]
-    assert any(m.startswith("📅 Maya Ruiz's dates changed") for m in msgs)
-    assert any(m.startswith(f"🧹 the guest's stay (Oct 24) is gone from the calendar") for m in msgs)
+    assert run(state, stays2, ha, at(2026, 10, 17, 13)) == []  # moved and cancelled stays: handled silently
     assert ha.s[f"datetime.{P}7_date_range_end"].startswith("2026-10-22T12:00")
     assert ha.s[f"text.{P}{d_slot}_pin"] == ""
     assert not {1, 2, 6} & set(ha.writes)  # permanent codes never touched

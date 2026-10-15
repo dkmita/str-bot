@@ -31,8 +31,7 @@ def test_watch_baseline_then_changes(cfg, feeds):
     feeds["a"] = ics(("a1", "20261018", "20261024", "Reserved"), ("a3", "20261110", "20261112", "Reserved"))
     feeds["v"] = ics()
     msgs, state = jobs.scan(cfg, state)
-    assert msgs == ["✏️ Dates changed: Airbnb Sun Oct 18 → Sat Oct 24 (6 nights) · HMA1 (was 2026-10-18 → 2026-10-23)",
-                    "🆕 New booking: Airbnb Tue Nov 10 → Thu Nov 12 (2 nights) · HMA3"]
+    assert msgs == ["🆕 New booking: Airbnb Tue Nov 10 → Thu Nov 12 (2 nights) · HMA3"]  # date changes are silent
     # VRBO suddenly showing no future stays is treated as a bad read, not as a cancellation
     assert any(s["uid"] == "v1" for s in state["entries"])
 
@@ -47,7 +46,7 @@ def test_watch_cancellation_failed_feed_and_double_booking(cfg, feeds):
     assert msgs == []  # the double booking is only announced once
     feeds["a"] = ics(("a9", "20261201", "20261203", "Reserved"))
     msgs, _ = jobs.scan(cfg, state)
-    assert "❌ Cancelled: Airbnb Sun Oct 18 → Fri Oct 23 (5 nights) · HMA1" in msgs
+    assert msgs == ["🆕 New booking: Airbnb Tue Dec 1 → Thu Dec 3 (2 nights) · HMA9"]  # the cancellation is silent
 
 
 def test_morning_text():

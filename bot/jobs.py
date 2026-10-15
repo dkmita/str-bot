@@ -20,20 +20,10 @@ HOT_TUB_CHECK = time(18, 0)  # daily; Vortex's Monday report normally arrives be
 
 
 def diff(before: dict[str, dict], after: dict[str, dict], today: str) -> list[str]:
-    """Messages for new, cancelled and changed future stays (dicts keyed by uid)."""
-    out = []
-    for uid, s in after.items():
-        if s["check_out"] <= today:
-            continue
-        old = before.get(uid)
-        if old is None:
-            out.append("🆕 New booking: " + ical.describe(s))
-        elif (old["check_in"], old["check_out"]) != (s["check_in"], s["check_out"]):
-            out.append(f"✏️ Dates changed: {ical.describe(s)} (was {old['check_in']} → {old['check_out']})")
-    for uid, s in before.items():
-        if uid not in after and s["check_out"] > today:
-            out.append("❌ Cancelled: " + ical.describe(s))
-    return out
+    """Messages for new future stays (dicts keyed by uid). Date changes and cancellations aren't announced: I get
+    those from the platforms already (door codes still follow them)."""
+    return ["🆕 New booking: " + ical.describe(s) for uid, s in after.items()
+            if s["check_out"] > today and uid not in before]
 
 
 def scan(cfg, state: dict) -> tuple[list[str], dict]:

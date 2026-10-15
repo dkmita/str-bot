@@ -99,7 +99,6 @@ def test_inquiry_with_deadline():
 
 @pytest.mark.parametrize("subject,expected", [
     ("Reservation confirmed - Pat Lee arrives Oct 9", "✅ New booking on Airbnb: Pat Lee · arrives Oct 9"),
-    ("Canceled: Reservation HMKMHAKMCZ for Oct 15 – 18, 2026", "❌ Canceled on Airbnb: HMKMHAKMCZ (Oct 15 – 18, 2026)"),
     ("Brady left a 5-star review!", "⭐ Brady left a 5-star review on Airbnb"),
 ])
 def test_one_liners(subject, expected):
@@ -147,7 +146,7 @@ def test_vrbo_formats():
     assert emails.card(booked, TZ)[0] == "✅ New booking on VRBO: Kate B · Dec 30, 2026 - Jan 2, 2027 · 4 adults, 2 children"
     canceled = emails.parse(email("Booking canceled by traveler: Dec 30, 2026 - Jan 2, 2027 (Property ID 5114807) "
                                   "Reservation HA-30FWLZ", "", sender))
-    assert emails.card(canceled, TZ)[0] == "❌ Canceled on VRBO: HA-30FWLZ (Dec 30, 2026 - Jan 2, 2027)"
+    assert canceled["kind"] == "canceled" and emails.card(canceled, TZ) is None  # parsed (closes threads), not shown
     review = emails.parse(email("Martin reviewed their stay (September 23, 2026-September 27, 2026) at your property # 1",
                                 "", "Vrbo <noreply@reviews.homeaway.com>"))
     assert emails.card(review, TZ)[0] == "⭐ Martin left a review on VRBO"

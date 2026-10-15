@@ -189,7 +189,7 @@ def card(item: dict, tz) -> tuple[str, InlineKeyboardMarkup | None] | None:
         when = f"arrives {item['arrives']}" if item.get("arrives") else item["dates"]
         return f"✅ New booking on {item['platform']}: {item['guest']} · {when}{guests}", None
     elif kind == "canceled":
-        return f"❌ Canceled on {item['platform']}: {item['code']} ({item['dates']})", None
+        return None  # I hear about cancellations from the platforms; still used to close the conversation thread
     else:  # review
         stars = f" a {item['stars']}-star review" if item.get("stars") else " a review"
         return f"⭐ {item['guest']} left{stars} on {item['platform']}", None
