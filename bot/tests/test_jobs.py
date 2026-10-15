@@ -31,7 +31,7 @@ def test_watch_baseline_then_changes(cfg, feeds):
     feeds["a"] = ics(("a1", "20261018", "20261024", "Reserved"), ("a3", "20261110", "20261112", "Reserved"))
     feeds["v"] = ics()
     msgs, state = jobs.scan(cfg, state)
-    assert msgs == ["🆕 New booking: Airbnb Tue Nov 10 → Thu Nov 12 (2 nights) · HMA3"]  # date changes are silent
+    assert msgs == []  # new bookings and date changes need nothing from me
     # VRBO suddenly showing no future stays is treated as a bad read, not as a cancellation
     assert any(s["uid"] == "v1" for s in state["entries"])
 
@@ -41,23 +41,12 @@ def test_watch_cancellation_failed_feed_and_double_booking(cfg, feeds):
     feeds["v"] = ics(("v1", "20261101", "20261104", "Reserved - Sam"), ("v2", "20261020", "20261022", "Reserved - Kim"))
     feeds["a"] = OSError("timeout")
     msgs, state = jobs.scan(cfg, state)
-    assert msgs[0].startswith("🚨 DOUBLE BOOKING: Airbnb Sun Oct 18") and msgs[1].startswith("🆕 New booking: VRBO")
+    assert len(msgs) == 1 and msgs[0].startswith("🚨 DOUBLE BOOKING: Airbnb Sun Oct 18")
     msgs, state = jobs.scan(cfg, state)
     assert msgs == []  # the double booking is only announced once
     feeds["a"] = ics(("a9", "20261201", "20261203", "Reserved"))
     msgs, _ = jobs.scan(cfg, state)
-    assert msgs == ["🆕 New booking: Airbnb Tue Dec 1 → Thu Dec 3 (2 nights) · HMA9"]  # the cancellation is silent
-
-
-def test_morning_text():
-    entries = ical.parse(ics(("a1", "20261018", "20261023", "Reserved"), ("a2", "20261023", "20261025", "Reserved"),
-                             ("a3", "20261024", "20261026", "Reserved")), "Airbnb")
-    text = jobs.morning_text(entries, date(2026, 10, 23))
-    assert text.splitlines() == ["🏠 Checking out today: Airbnb Sun Oct 18 → Fri Oct 23 (5 nights) · HMA1",
-                                 "🔑 Arriving today: Airbnb Fri Oct 23 → Sun Oct 25 (2 nights) · HMA2",
-                                 "↔️ Same-day turnover",
-                                 "📅 Arriving tomorrow: Airbnb Sat Oct 24 → Mon Oct 26 (2 nights) · HMA3"]
-    assert jobs.morning_text(entries, date(2026, 10, 20)) is None
+    assert msgs == []  # cancellations and new bookings are silent
 
 
 def test_hot_tub_check():
@@ -66,7 +55,7 @@ def test_hot_tub_check():
     assert text.startswith("🛁 No hot tub service report from Vortex today (Mon)")
     assert jobs.hot_tub_status(mon, [], st)[0] is None                     # once
     text, st = jobs.hot_tub_status(tue, [(tue, "Pool/Spa Service Report for 10/20/2026")], st)
-    assert text == "✅ Hot tub: Vortex's report came in after all (Tue Oct 20)."
+    assert text is None and st["arrived"]  # a late report needs no message
     assert jobs.hot_tub_status(fri, [(tue, "Pool/Spa Service Report for 10/20/2026")], st)[0] is None
     # on time: silent all week; invoices don't count as a visit
     assert jobs.hot_tub_status(mon, [(mon, "Pool/Spa Service Report for 10/19/2026")], {})[0] is None

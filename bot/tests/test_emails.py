@@ -97,12 +97,11 @@ def test_inquiry_with_deadline():
     assert "draft" in emails.draft_prompt(item).lower() and "Rick: Hi. Any deals" in emails.draft_prompt(item)
 
 
-@pytest.mark.parametrize("subject,expected", [
-    ("Reservation confirmed - Pat Lee arrives Oct 9", "✅ New booking on Airbnb: Pat Lee · arrives Oct 9"),
-    ("Brady left a 5-star review!", "⭐ Brady left a 5-star review on Airbnb"),
-])
-def test_one_liners(subject, expected):
-    assert emails.card(emails.parse(email(subject, "", "Airbnb <automated@airbnb.com>")), TZ) == (expected, None)
+@pytest.mark.parametrize("subject", ["Reservation confirmed - Pat Lee arrives Oct 9", "Brady left a 5-star review!",
+                                     "Canceled: Reservation HMKMHAKMCZ for Oct 15 – 18, 2026"])
+def test_no_action_needed_no_card(subject):
+    item = emails.parse(email(subject, "", "Airbnb <automated@airbnb.com>"))
+    assert item is not None and emails.card(item, TZ) is None  # parsed (closes threads), not shown
 
 
 def test_routine_and_unrelated_mail_is_skipped():
@@ -143,13 +142,13 @@ def test_vrbo_formats():
     assert kb.inline_keyboard[0][1].url == "https://www.vrbo.com/supply/interaction?interactionId=bdb9e0db-706c"
     booked = emails.parse(email("Instant Booking from Kate B: Dec 30, 2026 - Jan 2, 2027 - Vrbo #5114807",
                                 "Guests:\n        4 adults, 2 children\n", sender))
-    assert emails.card(booked, TZ)[0] == "✅ New booking on VRBO: Kate B · Dec 30, 2026 - Jan 2, 2027 · 4 adults, 2 children"
+    assert booked["kind"] == "confirmed" and emails.card(booked, TZ) is None
     canceled = emails.parse(email("Booking canceled by traveler: Dec 30, 2026 - Jan 2, 2027 (Property ID 5114807) "
                                   "Reservation HA-30FWLZ", "", sender))
     assert canceled["kind"] == "canceled" and emails.card(canceled, TZ) is None  # parsed (closes threads), not shown
     review = emails.parse(email("Martin reviewed their stay (September 23, 2026-September 27, 2026) at your property # 1",
                                 "", "Vrbo <noreply@reviews.homeaway.com>"))
-    assert emails.card(review, TZ)[0] == "⭐ Martin left a review on VRBO"
+    assert review["kind"] == "review" and emails.card(review, TZ) is None
 
 
 class FakeInbox:
@@ -187,7 +186,7 @@ def test_wants_draft():
     q = emails.parse(email("RE: Reservation for Luxury Hilltop Home With 360° Red Rock Views, Oct 9 – 16", MESSAGE))
     assert emails.wants_draft(q) and emails.card(q, TZ)[1].inline_keyboard[0][0].text == "✍️ Redraft"
     thanks = q | {"messages": [{"name": "Dana", "role": "Booker", "text": "Perfect! Thanks"}]}
-    assert not emails.wants_draft(thanks) and emails.card(thanks, TZ)[1].inline_keyboard[0][0].text == "✍️ Draft reply"
+    assert not emails.wants_draft(thanks) and emails.card(thanks, TZ) is None  # nothing to answer: no message
     answered = q | {"messages": q["messages"] + [{"name": "Leanne", "role": "Host", "text": "Yes!"}]}
     assert not emails.wants_draft(answered)
     assert emails.wants_draft({"kind": "inquiry"}) and not emails.wants_draft({"kind": "review"})
@@ -210,6 +209,7 @@ def test_vortex_emails():
     sender = '"Vortex Pools & Spas" <messages@appmail.getskimmer.com>'
     assert emails.card(emails.parse(email("Repair Needed", REPAIR, sender)), TZ) == \
         ("🛁 Hot tub (Vortex): Repair Needed\ntemp reading 108 · temp set point 99", None)
+    assert emails.card(emails.parse(email("Service Update", "chemicals balanced", sender)), TZ) is None  # routine
     report = emails.parse(email("Pool/Spa Service Report for 10/12/2026", "", sender))
     assert report["kind"] == "service_report" and emails.card(report, TZ) is None
     assert emails.parse(email("Invoice 2939 is ready!", "", sender)) is None

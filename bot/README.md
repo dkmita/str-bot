@@ -4,36 +4,22 @@ Telegram ⇄ this bot ⇄ Claude (claude-opus-5-5), with read-only access to the
 the "Sedona Home" Google Calendar, and the markdown notes in this repo (`property.md`, `notes/`). Notes the bot
 changes are committed to git. Infrastructure copied from `~/workout-coach` (same patterns, separate app).
 
-Today it can:
-- `/stays [days]`: upcoming reservations from both platforms, plus any double bookings (no Claude)
-- Hourly booking watch: new stays and 🚨 double bookings (no Claude). Date changes and cancellations aren't
-  announced (the platforms already tell me). The first read
-  is a silent baseline; a failed feed, or one that suddenly shows no future stays, is skipped instead of being
-  read as cancellations.
-- Every 5 min: Airbnb/VRBO notification emails → Telegram: 💬 guest messages and ⏳ inquiries/requests
-  (with the 24 h deadline) get a suggested reply right away (Claude, as Leanne, ~9¢; thank-yous skipped),
-  ✍️ Redraft and Open in Airbnb buttons; reminders repeat the suggestion;
-  ✅ confirmations and ⭐ reviews are one-liners (cancellations are silent). Leanne's own replies and routine mail are skipped;
-  the first read of an inbox is a silent baseline.
-- Hot tub (Vortex Pools & Spas, emails via Skimmer to d.kmita): work orders (Repair Needed, Service Update, filter/
-  cover cleans) → Telegram with the technician's notes; weekly reports, invoices and payments stay silent. Daily
-  6pm check: no Vortex service email on Monday → alert; a late report that week → "arrived" note; still nothing
-  by Friday → second alert. Based only on Vortex's emails (the Sedona Home calendar events are hand-made).
-  The report's chemical READINGS are taken on arrival (before balancing), so don't alert on them.
-- 7am (Sedona time): check-outs, arrivals, same-day turnovers and tomorrow's arrivals, if any (no Claude)
-- Chat: questions about stays, drafts of guest replies from `property.md`, keeping notes up to date
-- `/usage [days]`: Claude spend report
-- `/health`: runs every check now (see Monitoring)
-- `/locks`: lock states, door sensors and low batteries from Home Assistant (over Tailscale)
-- Guest door codes (`doorcodes.py`, every 15 min, no Claude): a week before check-in the bot reserves a free Keymaster
-  slot on the garage lock ("Oct 18 Sonya", arrival 10:00 AM → checkout noon) with a random placeholder PIN and asks
-  you can replace (✏️ Set PIN, or in HA; planned: the guest's phone last-4, automatically). 15 min after the window opens it checks Keymaster synced it to the lock; an hour after it ends it resets
-  the slot. Cancelled/moved stays reset or move the slot quietly (no message). Permanent codes (Owners, Cleaners, ...) are never touched;
-  hand-made guest slots are adopted. `/codes` lists them.
-- Unanswered-message reminders (`inbox.py`, no Claude): threads from the notification emails; Leanne's reply, a
-  booking/cancellation or ✅ Handled closes them. Inquiries/requests remind at 20 h and 23 h, other guest messages
-  after 3 h (thank-yous skipped). VRBO doesn't email the host's replies, so VRBO threads need ✅ Handled.
-  `/inbox`: everyone waiting for an answer, both platforms.
+Telegram messages go out **only when I need to act**; everything else is logged. Today it:
+- Watches Airbnb/VRBO notification emails every 5 min (no Claude to sort them): 💬 guest messages that need an answer
+  and ⏳ inquiries/booking requests (24 h deadline) come with a suggested reply in Leanne's voice (~9¢ each), ✍️ Redraft
+  and Open-in-app buttons. Thank-yous, Leanne's own replies, confirmations, cancellations and reviews are silent.
+- Reminds me about unanswered guests (`inbox.py`): inquiries/requests at 20 h and 23 h, messages after 3 h.
+- 🚨 Double bookings across Airbnb and VRBO (hourly, from the iCal feeds). New/changed/cancelled stays are silent.
+- Guest door codes (`doorcodes.py`): reserves a Keymaster slot on the garage lock a week ahead (arrival 10:00 AM →
+  checkout noon, random placeholder PIN; planned: guest's phone last-4), checks it synced 15 min after it goes live,
+  resets it an hour after checkout, follows moved/cancelled stays. Messages only for ❗ a code not on the lock, no free
+  slot, or a failed write. Permanent codes (Owners, Cleaners, ...) are never touched.
+- Hot tub (Vortex via Skimmer): 🛁 no Monday service report by 6pm, or none all week by Friday; Vortex "Repair
+  Needed" work orders. Routine reports and service updates are silent. (Report readings are pre-service.)
+- Health (`health.py`, every 30 min): 🩺 a connection or job failing twice in a row, or Claude spend over $1.50/day
+  (no message when it recovers). Bot errors → ⚠️ (at most one per 10 min).
+- On request: `/stays`, `/inbox`, `/locks`, `/codes`, `/health`, `/usage`, and chat (~3¢/message): questions about
+  stays, guest drafts, keeping `property.md`'s Guest Q&A current.
 
 Not yet: Home Assistant door codes, messaging and pricing on the platforms, cleaner email/WhatsApp (see CLAUDE.md).
 

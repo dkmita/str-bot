@@ -1,7 +1,7 @@
 """Health checks: is everything the bot depends on reachable, and are its jobs actually working?
 
-- Every 30 min: each check below. A check failing twice in a row (~1 h) → one Telegram alert, and a note when it
-  recovers. The result also goes to a healthchecks.io check (HC_DEPS_PING_URL: success, or /fail with the list),
+- Every 30 min: each check below. A check failing twice in a row (~1 h) → one Telegram alert (no note when it
+  recovers: nothing to do). The result also goes to a healthchecks.io check (HC_DEPS_PING_URL: success, or /fail with the list),
   which alerts by email even if Telegram itself is the problem.
 - The 5-minute heartbeat (ops.heartbeat → HC_PING_URL) covers "the bot is running and Telegram answers".
 - /health runs everything now and shows the results.
@@ -138,19 +138,19 @@ async def check_job(ctx: ContextTypes.DEFAULT_TYPE) -> None:
     app, cfg = ctx.application, ctx.bot_data["cfg"]
     results = await run_all(app)
     streaks = app.bot_data.setdefault("fail_streaks", {})
-    alerts, recovered = [], []
+    alerts = []
     for name, (ok, detail) in results.items():
         before = streaks.get(name, 0)
         streaks[name] = 0 if ok else before + 1
         if streaks[name] == ALERT_AFTER:
             alerts.append(f"❌ {name}: {detail}")
         elif ok and before >= ALERT_AFTER:
-            recovered.append(f"✅ {name} is OK again")
+            log.info("Health check: %s is OK again", name)  # no message: nothing to do
     failing = [f"{n}: {d}" for n, (ok, d) in results.items() if not ok]
     log.info("Health check: %d/%d ok%s", len(results) - len(failing), len(results),
              f"; failing: {'; '.join(failing)}" if failing else "")
-    if (alerts or recovered) and cfg.allowed_chat_id is not None and results["Telegram"][0]:
-        await chat.send(app, cfg.allowed_chat_id, "🩺 Health check\n" + "\n".join(alerts + recovered)
+    if alerts and cfg.allowed_chat_id is not None and results["Telegram"][0]:
+        await chat.send(app, cfg.allowed_chat_id, "🩺 Health check\n" + "\n".join(alerts)
                         + ("\n\nDetails: /health" if alerts else ""))
     if cfg.hc_deps_ping_url:  # healthchecks.io alerts by email, independent of Telegram
         try:

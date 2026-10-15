@@ -1,4 +1,6 @@
-"""Scheduled jobs, all code (no Claude): booking watch and the morning turnover note."""
+"""Scheduled jobs, all code (no Claude): booking watch (double bookings) and the hot tub check.
+
+Messages go out only when I need to act."""
 
 import asyncio
 import json
@@ -15,15 +17,7 @@ from integrations import ical
 log = logging.getLogger("str")
 
 WATCH_EVERY = timedelta(hours=1)
-MORNING = time(7, 0)
 HOT_TUB_CHECK = time(18, 0)  # daily; Vortex's Monday report normally arrives between 9am and 3pm
-
-
-def diff(before: dict[str, dict], after: dict[str, dict], today: str) -> list[str]:
-    """Messages for new future stays (dicts keyed by uid). Date changes and cancellations aren't announced: I get
-    those from the platforms already (door codes still follow them)."""
-    return ["🆕 New booking: " + ical.describe(s) for uid, s in after.items()
-            if s["check_out"] > today and uid not in before]
 
 
 def scan(cfg, state: dict) -> tuple[list[str], dict]:
@@ -46,8 +40,6 @@ def scan(cfg, state: dict) -> tuple[list[str], dict]:
                         platform, len(future_before))
             entries += list(before.values())
             continue
-        if platform in state.get("platforms", []):
-            messages += diff(before, stays, today)
         entries += got
     seen = set(state.get("doubles", []))
     doubles = {f"{a['uid']}|{b['uid']}": (a, b) for a, b in ical.double_bookings(entries) if b["check_out"] > today}
@@ -70,41 +62,24 @@ async def watch(ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await chat.send(ctx.application, cfg.allowed_chat_id, "\n".join(messages))
 
 
-def morning_text(entries: list[dict], today: date) -> str | None:
-    """Check-outs and check-ins today, and tomorrow's arrivals (so the turnover can be planned)."""
-    d0, d1 = today.isoformat(), (today + timedelta(days=1)).isoformat()
-    stays = [s for s in entries if s["kind"] == "stay"]
-    out = [s for s in stays if s["check_out"] == d0]
-    arrive = [s for s in stays if s["check_in"] == d0]
-    tomorrow = [s for s in stays if s["check_in"] == d1]
-    lines = [f"🏠 Checking out today: {ical.describe(s)}" for s in out]
-    lines += [f"🔑 Arriving today: {ical.describe(s)}" for s in arrive]
-    if out and arrive:
-        lines.append("↔️ Same-day turnover")
-    lines += [f"📅 Arriving tomorrow: {ical.describe(s)}" for s in tomorrow]
-    return "\n".join(lines) or None
-
-
 def hot_tub_status(today: date, mails: list[tuple[date, str]], state: dict) -> tuple[str | None, dict]:
     """Vortex services the hot tub every Monday and emails a report (or work order) the same day. Only their emails
     count (the calendar events are hand-made and don't follow reschedules).
     `mails` = (day, subject) of this week's Vortex emails; `state` = {"week", "alerted", "arrived"}.
-    Monday: nothing yet → alert. Later: a report arrives after an alert → note it. Friday: nothing all week → alert."""
+    Monday: nothing yet → alert. Friday: still nothing all week → alert. (A late report needs no message.)"""
     week = (today - timedelta(days=today.weekday())).isoformat()
     state = state if state.get("week") == week else {"week": week, "alerted": [], "arrived": False}
     visits = sorted(d for d, subject in mails if not VORTEX_ROUTINE.search(subject))
     if visits:
-        if state["alerted"] and not state["arrived"]:
-            state["arrived"] = True
-            return f"✅ Hot tub: Vortex's report came in after all ({visits[-1]:%a %b %-d}).", state
+        state["arrived"] = True  # late report after an alert: nothing to do, so no message
         return None, state
     if today.weekday() == 0 and "mon" not in state["alerted"]:
         state["alerted"].append("mon")
-        return ("🛁 No hot tub service report from Vortex today (Mon). They usually come Mondays and email by 3pm. "
-                "I'll tell you if it shows up later this week."), state
+        return ("🛁 No hot tub service report from Vortex today (Mon). They usually come Mondays and email by 3pm: "
+                "check with Vortex if the visit didn't happen."), state
     if today.weekday() == 4 and "fri" not in state["alerted"]:
         state["alerted"].append("fri")
-        return "🛁 Still no hot tub service from Vortex this week (no report since Monday).", state
+        return "🛁 Still no hot tub service from Vortex this week (no report since Monday): contact Vortex.", state
     return None, state
 
 
@@ -132,12 +107,3 @@ async def hot_tub_check(ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await chat.send(ctx.application, cfg.allowed_chat_id, text)
 
 
-async def morning(ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    cfg = ctx.bot_data["cfg"]
-    if cfg.allowed_chat_id is None:
-        return
-    entries = await asyncio.to_thread(ical.load_all, cfg.feeds)
-    text = morning_text(entries, datetime.now(cfg.tz).date())
-    log.info("Morning note: %s", "sent" if text else "nothing today")
-    if text:
-        await chat.send(ctx.application, cfg.allowed_chat_id, text)

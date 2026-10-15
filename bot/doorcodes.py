@@ -5,6 +5,7 @@
   me (✏️ Set PIN, or in Home Assistant). Planned: use the last 4 digits of the guest's phone (Airbnb's iCal has them;
   VRBO's booking email has the number) so no manual step is needed.
 - 15 min after the window opens: check Keymaster synced the code to the lock. An hour after it ends: reset the slot.
+- Messages only when I need to act: a code that didn't reach the lock, no free slot, or a failed write.
 - Cancelled or moved stays: the slot is reset or its window moved, without a message (failures are still reported).
 Only guest slots are used: empty ones, or ones with date-range limits. Permanent codes (Owners, Cleaners, ...) are
 never touched. PINs aren't logged or stored (only a hash of the placeholder, to tell when it's been replaced).
@@ -211,9 +212,7 @@ def step(state: dict, stays: list[dict], slots: dict[int, dict], now: datetime, 
         codes[uid] = {"slot": n, "name": name, "guest": guest or "the guest", "start": start.isoformat(),
                       "end": end.isoformat(), "placeholder": _h(pin), "status": "set", "check_in": stay["check_in"],
                       "check_out": stay["check_out"], "reminded": []}
-        out.append((f"🔑 Reserved garage slot {n} for {guest or 'the ' + stay['platform'] + ' guest'} "
-                    f"({ical.describe(stay)}).\nWorks {start:%a %b %-d %-I:%M %p} → {end:%a %b %-d %-I:%M %p} "
-                    "(placeholder PIN).", uid))
+        log.info("Door codes: reserved slot %d for %s (%s)", n, name, stay["check_in"])  # no action needed
 
     # verification, cleanup
     for uid, c in codes.items():
@@ -223,8 +222,8 @@ def step(state: dict, stays: list[dict], slots: dict[int, dict], now: datetime, 
         start, end = datetime.fromisoformat(c["start"]), datetime.fromisoformat(c["end"])
         if c["status"] == "set" and now >= start + VERIFY_AFTER and now < end:
             if s.get("sync") == "Synced" and s.get("active"):
-                c["status"] = "verified"
-                out.append((f"✅ {c['guest']}'s code is on the garage lock (slot {c['slot']}).", None))
+                c["status"] = "verified"  # on the lock: no message needed
+                log.info("Door codes: %s verified on the lock (slot %d)", c["name"], c["slot"])
             elif "verify" not in c["reminded"]:
                 c["reminded"].append("verify")
                 out.append((f"❗ {c['guest']}'s code isn't on the garage lock yet (slot {c['slot']}: "
@@ -233,7 +232,7 @@ def step(state: dict, stays: list[dict], slots: dict[int, dict], now: datetime, 
             if not attempt(out, lambda: reset_slot(ha, c["slot"]), f"⚠️ Couldn't remove {c['guest']}'s code (slot {c['slot']})"):
                 continue
             c["status"] = "removed"
-            out.append((f"🧹 Removed {c['guest']}'s garage code (slot {c['slot']}) after checkout.", None))
+            log.info("Door codes: removed %s (slot %d) after checkout", c["name"], c["slot"])
     for uid in [u for u, c in codes.items() if c["status"] == "removed" and
                 datetime.fromisoformat(c["end"]) < now - timedelta(days=14)]:
         del codes[uid]

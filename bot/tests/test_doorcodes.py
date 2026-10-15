@@ -74,25 +74,23 @@ def test_full_lifecycle():
              stay("c", "2026-10-18", "2026-10-23"), stay("d", "2026-10-24", "2026-10-30")]
     state = {"codes": {}, "awaiting": None}
 
-    msgs = run(state, stays, ha, at(2026, 10, 15, 12))  # deploy day
-    assert [m for m, _ in msgs][0].startswith("🔑 Reserved garage slot 7 for Maya Ruiz (Airbnb Sun Oct 18")
-    assert len(msgs) == 1 and msgs[0][1] == "c"  # adoptions are silent; Oct 24 is more than a week out
+    assert run(state, stays, ha, at(2026, 10, 15, 12)) == []  # reserving and adopting need nothing from me
+    assert state["codes"]["c"]["slot"] == 7 and "d" not in state["codes"]  # Oct 24 is more than a week out
     assert state["codes"]["a"]["status"] == "verified" and state["codes"]["b"]["guest"] == "Amy"
     assert ha.s[f"text.{P}7_name"] == "Oct 18 Maya" and len(ha.s[f"text.{P}7_pin"]) == 6
     assert ha.s[f"datetime.{P}7_date_range_start"].startswith("2026-10-18T10:00")
     assert run(state, stays, ha, at(2026, 10, 15, 12, 15)) == []  # nothing new
 
     ha.lock(5)
-    msgs = [m for m, _ in run(state, stays, ha, at(2026, 10, 16, 10, 20))]
-    assert msgs == ["✅ Amy's code is on the garage lock (slot 5)."]  # no placeholder reminders
+    assert run(state, stays, ha, at(2026, 10, 16, 10, 20)) == []  # on the lock: fine, no message
+    assert state["codes"]["b"]["status"] == "verified"
 
-    msgs = [m for m, _ in run(state, stays, ha, at(2026, 10, 16, 13, 5))]
-    assert msgs == ["🧹 Removed the guest's garage code (slot 3) after checkout."]
-    assert ha.s[f"text.{P}3_pin"] == ""
+    assert run(state, stays, ha, at(2026, 10, 16, 13, 5)) == []  # cleanup after checkout: silent
+    assert ha.s[f"text.{P}3_pin"] == "" and state["codes"]["a"]["status"] == "removed"
 
-    msgs = run(state, stays, ha, at(2026, 10, 17, 12))  # Oct 24 is now within a week: slot 3 (emptied) is reused
-    assert msgs[0][0].startswith("🔑 Reserved garage slot 3 for the Airbnb guest")
+    assert run(state, stays, ha, at(2026, 10, 17, 12)) == []  # Oct 24 is now within a week
     d_slot = state["codes"]["d"]["slot"]
+    assert d_slot == 3  # slot 3 (emptied at cleanup) is reused
 
     stays2 = [s for s in stays if s["uid"] != "d"]
     stays2[2] = stay("c", "2026-10-18", "2026-10-22")  # Maya leaves a day early
@@ -119,3 +117,11 @@ def test_codes_text():
     state = {"codes": {"b": {"slot": 5, "name": "Oct 16 Amy", "guest": "Amy", "status": "set", "placeholder": None,
                              "start": "2026-10-16T10:00:00-07:00", "end": "2026-10-18T12:00:00-07:00"}}}
     assert dc.codes_text(state) == "🔑 Guest codes (garage)\n- Oct 16 Amy · slot 5 · Fri Oct 16 10:00 AM → Sun 12:00 PM · scheduled"
+
+
+def test_code_missing_from_lock_is_the_one_alert():
+    ha = FakeHA({5: ("Oct 16 Amy", "7309", True, "2026-10-16T17:00:00+00:00", "2026-10-18T19:00:00+00:00", "Disconnected", False)})
+    state = {"codes": {}, "awaiting": None}
+    run(state, [stay("b", "2026-10-16", "2026-10-18")], ha, at(2026, 10, 15, 12))
+    (msg, _), = run(state, [stay("b", "2026-10-16", "2026-10-18")], ha, at(2026, 10, 16, 10, 20))
+    assert msg.startswith("❗ Amy's code isn't on the garage lock yet (slot 5: Disconnected)")

@@ -41,6 +41,8 @@ Telegram bot that helps me run my short-term rental in Sedona, AZ (listed on Air
   "Phone Number (Last 4 Digits)"; VRBO booking email "Traveler Phone"). Until then slots get a random placeholder, no reminders.
 
 ## Rules for any new capability
+- **Telegram messages only when I need to act** (reply, decide, fix something). Routine events, successes,
+  recoveries and FYIs are logged, not sent. I get booking changes/cancellations from the platforms already.
 - Anything that reaches guests, the listings or prices is proposed with approve buttons first and applied by code
   after I tap Approve. Door codes: the bot may reserve guest slots automatically, but only with a random placeholder
   PIN; the real code comes from me (✏️ Set PIN) or Home Assistant. Never touch permanent codes (no date range).

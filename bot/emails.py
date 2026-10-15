@@ -170,12 +170,14 @@ def card(item: dict, tz) -> tuple[str, InlineKeyboardMarkup | None] | None:
     kind, dates = item["kind"], item.get("dates", "")
     if kind == "service_report":
         return None
-    if kind == "work_order":
+    if kind == "work_order":  # only repairs need me; service updates and cleanings are routine
+        if not re.search(r"repair|needed|problem|issue|leak|broken", item["subject"], re.I):
+            return None
         return f"🛁 Hot tub (Vortex): {item['subject']}" + (f"\n{item['notes']}" if item.get("notes") else ""), None
     guests = f" · {item['guests']}" if item.get("guests") else ""
     if kind == "message":
         from_guest = [b for b in item["messages"] if b["role"] not in HOST_ROLES]
-        if not from_guest:
+        if not from_guest or not wants_draft(item):  # Leanne's own replies and thank-yous need nothing from me
             return None
         quoted = "\n".join(f"{b['name']}: \"{b['text'][:700]}\"" for b in from_guest)
         text = f"💬 {item['platform']} message · {dates}{guests}\n{quoted}"
@@ -185,15 +187,9 @@ def card(item: dict, tz) -> tuple[str, InlineKeyboardMarkup | None] | None:
         what = f"\n\"{item['body'][:700]}\"" if item.get("body") else ""
         text = (f"⏳ {label}: {item.get('guest') or 'guest'} · {dates or item['subject']}{guests}{what}\n"
                 f"Respond by {due:%a %-I:%M %p}")
-    elif kind == "confirmed":
-        when = f"arrives {item['arrives']}" if item.get("arrives") else item["dates"]
-        return f"✅ New booking on {item['platform']}: {item['guest']} · {when}{guests}", None
-    elif kind == "canceled":
-        return None  # I hear about cancellations from the platforms; still used to close the conversation thread
-    else:  # review
-        stars = f" a {item['stars']}-star review" if item.get("stars") else " a review"
-        return f"⭐ {item['guest']} left{stars} on {item['platform']}", None
-    rows = [[InlineKeyboardButton("✍️ Redraft" if wants_draft(item) else "✍️ Draft reply", callback_data=f"em|d|{item['id']}")]]
+    else:  # confirmed, canceled, review: no action needed (still used to close conversation threads)
+        return None
+    rows = [[InlineKeyboardButton("✍️ Redraft", callback_data=f"em|d|{item['id']}")]]
     if item.get("thread_url"):
         rows[0].append(InlineKeyboardButton(f"Open in {item['platform']}", url=item["thread_url"]))
     return text, InlineKeyboardMarkup(rows)

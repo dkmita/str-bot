@@ -36,7 +36,7 @@ check(not unhandled, f"every tool has a handler {unhandled or ''}")
 check(agent.system.startswith("# STR Host Assistant") and "Running as a Telegram bot" in agent.system,
       "system prompt = host.md + telegram.md")
 jobs = sorted(j.name for j in app.job_queue.jobs())
-check({"heartbeat", "booking_watch", "email_watch", "morning", "health_check", "hot_tub_check"} <= set(jobs), f"scheduled jobs: {', '.join(jobs)}")
+check({"heartbeat", "booking_watch", "email_watch", "health_check", "hot_tub_check"} <= set(jobs), f"scheduled jobs: {', '.join(jobs)}")
 check(cfg.allowed_chat_id is not None, "TELEGRAM_ALLOWED_CHAT_ID is set")
 check(bool(cfg.feeds), f"reservation feeds: {', '.join(sorted(cfg.feeds)) or 'none'}")
 check(cfg.model in usage.PRICES, f"price table has {cfg.model}")

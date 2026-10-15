@@ -30,7 +30,7 @@ def app_for(cfg, checks):
     return app, types.SimpleNamespace(application=app, bot_data=app.bot_data)
 
 
-def test_alert_after_two_failures_then_recovery(cfg, monkeypatch):
+def test_alert_after_two_failures_silent_recovery(cfg, monkeypatch):
     state = {"ok": True}
 
     def gmail():
@@ -49,7 +49,7 @@ def test_alert_after_two_failures_then_recovery(cfg, monkeypatch):
     assert len(app.bot.sent) == 1  # not repeated while it stays broken
     state["ok"] = True
     asyncio.run(health.check_job(ctx))
-    assert app.bot.sent[-1] == "🩺 Health check\n✅ Gmail leomproperty is OK again"
+    assert len(app.bot.sent) == 1  # recovering needs nothing from me: no message
 
 
 def test_stale_job_and_spend(cfg, monkeypatch):
