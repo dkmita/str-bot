@@ -1,9 +1,9 @@
 """Guest door codes on the garage lock (Home Assistant + Keymaster), from booking to checkout. No Claude.
 
 - A week before check-in: reserve a free guest slot named "Oct 16 Amy", active from arrival day 10:00 AM to checkout
-  day noon, with a random placeholder PIN nobody knows (so it's harmless if never replaced). Tell me, with ✏️ Set PIN.
-- The real code comes from me (✏️ Set PIN, or set it in Home Assistant directly). Reminders if it's still the
-  placeholder 2 days before arrival and on arrival morning.
+  day noon, with a random placeholder PIN nobody knows (so it's harmless if never replaced). The real code is set by
+  me (✏️ Set PIN, or in Home Assistant). Planned: use the last 4 digits of the guest's phone (Airbnb's iCal has them;
+  VRBO's booking email has the number) so no manual step is needed.
 - 15 min after the window opens: check Keymaster synced the code to the lock. An hour after it ends: reset the slot.
 - Cancelled or moved stays: the slot is reset or its window moved.
 Only guest slots are used: empty ones, or ones with date-range limits. Permanent codes (Owners, Cleaners, ...) are
@@ -214,26 +214,19 @@ def step(state: dict, stays: list[dict], slots: dict[int, dict], now: datetime, 
                       "end": end.isoformat(), "placeholder": _h(pin), "status": "set", "check_in": stay["check_in"],
                       "check_out": stay["check_out"], "reminded": []}
         out.append((f"🔑 Reserved garage slot {n} for {guest or 'the ' + stay['platform'] + ' guest'} "
-                    f"({ical.describe(stay)}).\nWorks {start:%a %b %-d %-I:%M %p} → {end:%a %b %-d %-I:%M %p}.\n"
-                    "The PIN is a random placeholder for now: send me the real code.", uid))
+                    f"({ical.describe(stay)}).\nWorks {start:%a %b %-d %-I:%M %p} → {end:%a %b %-d %-I:%M %p} "
+                    "(placeholder PIN).", uid))
 
-    # placeholder reminders, verification, cleanup
+    # verification, cleanup
     for uid, c in codes.items():
         if c["status"] == "removed":
             continue
         s = slots.get(c["slot"], {})
         start, end = datetime.fromisoformat(c["start"]), datetime.fromisoformat(c["end"])
-        still_placeholder = c.get("placeholder") and _h(s.get("pin") or "") == c["placeholder"]
-        for tag, when in (("2d", start - timedelta(days=2)), ("day", start.replace(hour=7, minute=0))):
-            if still_placeholder and now >= when and now < end and tag not in c["reminded"]:
-                c["reminded"].append(tag)
-                out.append((f"⚠️ {c['guest']}'s garage code (slot {c['slot']}, from {start:%a %-I:%M %p}) is still the "
-                            "placeholder. Send me the real code.", uid))
         if c["status"] == "set" and now >= start + VERIFY_AFTER and now < end:
             if s.get("sync") == "Synced" and s.get("active"):
                 c["status"] = "verified"
-                out.append((f"✅ {c['guest']}'s code is on the garage lock (slot {c['slot']})."
-                            + (" ⚠️ But it's still the placeholder PIN." if still_placeholder else ""), uid if still_placeholder else None))
+                out.append((f"✅ {c['guest']}'s code is on the garage lock (slot {c['slot']}).", None))
             elif "verify" not in c["reminded"]:
                 c["reminded"].append("verify")
                 out.append((f"❗ {c['guest']}'s code isn't on the garage lock yet (slot {c['slot']}: "

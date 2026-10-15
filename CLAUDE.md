@@ -37,6 +37,9 @@ Telegram bot that helps me run my short-term rental in Sedona, AZ (listed on Air
   first, then per-stay codes behind Approve. Tailscale isn't installed on the laptop (stale CLI; the 100.96.x
   address there is Cloudflare WARP).
 
+- Door codes: set each guest's PIN to the last 4 digits of their phone automatically (Airbnb iCal
+  "Phone Number (Last 4 Digits)"; VRBO booking email "Traveler Phone"). Until then slots get a random placeholder, no reminders.
+
 ## Rules for any new capability
 - Anything that reaches guests, the listings or prices is proposed with approve buttons first and applied by code
   after I tap Approve. Door codes: the bot may reserve guest slots automatically, but only with a random placeholder

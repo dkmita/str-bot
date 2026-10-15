@@ -26,8 +26,7 @@ Today it can:
 - `/locks`: lock states, door sensors and low batteries from Home Assistant (over Tailscale)
 - Guest door codes (`doorcodes.py`, every 15 min, no Claude): a week before check-in the bot reserves a free Keymaster
   slot on the garage lock ("Oct 18 Sonya", arrival 10:00 AM → checkout noon) with a random placeholder PIN and asks
-  for the real code (✏️ Set PIN, or set it in HA). Reminders while it's still the placeholder (2 days before, arrival
-  morning); 15 min after the window opens it checks Keymaster synced it to the lock; an hour after it ends it resets
+  you can replace (✏️ Set PIN, or in HA; planned: the guest's phone last-4, automatically). 15 min after the window opens it checks Keymaster synced it to the lock; an hour after it ends it resets
   the slot. Cancelled/moved stays reset or move the slot. Permanent codes (Owners, Cleaners, ...) are never touched;
   hand-made guest slots are adopted. `/codes` lists them.
 - Unanswered-message reminders (`inbox.py`, no Claude): threads from the notification emails; Leanne's reply, a

@@ -84,16 +84,14 @@ def test_full_lifecycle():
 
     ha.lock(5)
     msgs = [m for m, _ in run(state, stays, ha, at(2026, 10, 16, 10, 20))]
-    assert "✅ Amy's code is on the garage lock (slot 5)." in msgs
-    assert any(m.startswith("⚠️ Maya Ruiz's garage code (slot 7") for m in msgs)  # 2 days before: still placeholder
+    assert msgs == ["✅ Amy's code is on the garage lock (slot 5)."]  # no placeholder reminders
 
     msgs = [m for m, _ in run(state, stays, ha, at(2026, 10, 16, 13, 5))]
-    assert msgs == ["🧹 Removed the guest's garage code (slot 3) after checkout."] or \
-        msgs == ["🧹 Removed the guest's garage code (slot 3) after checkout."]
+    assert msgs == ["🧹 Removed the guest's garage code (slot 3) after checkout."]
     assert ha.s[f"text.{P}3_pin"] == ""
 
-    msgs = run(state, stays, ha, at(2026, 10, 17, 12))  # Oct 24 is now within a week: slot 4 (expired) is reused
-    assert msgs[0][0].startswith("🔑 Reserved garage slot 8") or msgs[0][0].startswith("🔑 Reserved garage slot 3")
+    msgs = run(state, stays, ha, at(2026, 10, 17, 12))  # Oct 24 is now within a week: slot 3 (emptied) is reused
+    assert msgs[0][0].startswith("🔑 Reserved garage slot 3 for the Airbnb guest")
     d_slot = state["codes"]["d"]["slot"]
 
     stays2 = [s for s in stays if s["uid"] != "d"]
