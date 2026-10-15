@@ -28,7 +28,8 @@ ALERT_AFTER = 2  # consecutive failures
 DAILY_BUDGET_USD = 1.5  # above average use; catches runaways
 MIN_FREE_MB = 100
 # job → longest acceptable time since its last successful run
-JOB_MAX_AGE = {"email_watch": timedelta(minutes=30), "booking_watch": timedelta(hours=3)}
+JOB_MAX_AGE = {"email_watch": timedelta(minutes=30), "booking_watch": timedelta(hours=3),
+               "door_codes": timedelta(minutes=45)}
 STARTUP_GRACE = timedelta(minutes=20)
 
 
@@ -101,7 +102,7 @@ def _jobs(app, started) -> dict[str, str | None]:
     last = app.bot_data.get("last_ok", {})
     out = {}
     for name, max_age in JOB_MAX_AGE.items():
-        if name == "email_watch" and not app.bot_data["inboxes"]:
+        if (name == "email_watch" and not app.bot_data["inboxes"]) or (name == "door_codes" and not app.bot_data.get("ha")):
             continue
         t = last.get(name)
         if t is None:

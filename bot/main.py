@@ -8,6 +8,7 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Mess
 
 import chat
 import config
+import doorcodes
 import emails
 import health
 import inbox
@@ -39,9 +40,11 @@ def build_app(cfg: config.Config) -> Application:
     app.add_handler(CommandHandler("health", health.on_health))
     app.add_handler(CommandHandler("inbox", inbox.on_inbox))
     app.add_handler(CommandHandler("locks", chat.on_locks))
+    app.add_handler(CommandHandler("codes", doorcodes.on_codes))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat.on_message))
     app.add_handler(CallbackQueryHandler(emails.on_button, pattern=r"^em\|"))
     app.add_handler(CallbackQueryHandler(inbox.on_button, pattern=r"^ib\|"))
+    app.add_handler(CallbackQueryHandler(doorcodes.on_button, pattern=r"^dc\|"))
     app.add_error_handler(ops.on_error)
 
     q = app.job_queue
@@ -51,6 +54,8 @@ def build_app(cfg: config.Config) -> Application:
     q.run_daily(jobs.morning, jobs.MORNING.replace(tzinfo=cfg.tz), name="morning")
     q.run_daily(jobs.hot_tub_check, jobs.HOT_TUB_CHECK.replace(tzinfo=cfg.tz), name="hot_tub_check")
     q.run_repeating(health.check_job, interval=health.CHECK_EVERY, first=300, name="health_check")
+    if ha:
+        q.run_repeating(doorcodes.job, interval=doorcodes.CHECK_EVERY, first=120, name="door_codes")
     return app
 
 

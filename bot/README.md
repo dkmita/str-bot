@@ -23,7 +23,13 @@ Today it can:
 - Chat: questions about stays, drafts of guest replies from `property.md`, keeping notes up to date
 - `/usage [days]`: Claude spend report
 - `/health`: runs every check now (see Monitoring)
-- `/locks`: lock states, door sensors and low batteries from Home Assistant (read-only, over Tailscale)
+- `/locks`: lock states, door sensors and low batteries from Home Assistant (over Tailscale)
+- Guest door codes (`doorcodes.py`, every 15 min, no Claude): a week before check-in the bot reserves a free Keymaster
+  slot on the garage lock ("Oct 18 Sonya", arrival 10:00 AM → checkout noon) with a random placeholder PIN and asks
+  for the real code (✏️ Set PIN, or set it in HA). Reminders while it's still the placeholder (2 days before, arrival
+  morning); 15 min after the window opens it checks Keymaster synced it to the lock; an hour after it ends it resets
+  the slot. Cancelled/moved stays reset or move the slot. Permanent codes (Owners, Cleaners, ...) are never touched;
+  hand-made guest slots are adopted. `/codes` lists them.
 - Unanswered-message reminders (`inbox.py`, no Claude): threads from the notification emails; Leanne's reply, a
   booking/cancellation or ✅ Handled closes them. Inquiries/requests remind at 20 h and 23 h, other guest messages
   after 3 h (thank-yous skipped). VRBO doesn't email the host's replies, so VRBO threads need ✅ Handled.
@@ -79,6 +85,7 @@ bot/
 ├── jobs.py            # booking watch, morning turnover note (code only)
 ├── ops.py             # error alerts, healthchecks.io heartbeat
 ├── health.py          # connection/job checks, /health
+├── doorcodes.py       # guest codes on the garage lock: reserve, verify, clean up, /codes
 ├── agent.py           # Claude loop, conversations (new one after 1 h idle), context pack
 ├── tools.py           # tool schemas + dispatcher
 ├── prompts/telegram.md# bot-specific instructions appended to host.md

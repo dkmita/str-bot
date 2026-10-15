@@ -90,6 +90,9 @@ async def on_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     if not is_allowed(cfg, update):
         log.warning("Ignoring message from chat %s", update.effective_chat.id)
         return
+    import doorcodes  # local import: doorcodes imports this module
+    if await doorcodes.on_text(update, ctx):  # a PIN typed after ✏️ Set PIN
+        return
     agent = ctx.bot_data["agent"]
     typing = asyncio.create_task(keep_typing(ctx, update.effective_chat.id))
     try:

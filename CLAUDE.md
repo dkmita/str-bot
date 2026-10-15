@@ -38,6 +38,7 @@ Telegram bot that helps me run my short-term rental in Sedona, AZ (listed on Air
   address there is Cloudflare WARP).
 
 ## Rules for any new capability
-- Anything that reaches guests, the listings, prices or the door lock is proposed with approve buttons first
-  and applied by code after I tap Approve (same pattern as the coach's proposals).
+- Anything that reaches guests, the listings or prices is proposed with approve buttons first and applied by code
+  after I tap Approve. Door codes: the bot may reserve guest slots automatically, but only with a random placeholder
+  PIN; the real code comes from me (✏️ Set PIN) or Home Assistant. Never touch permanent codes (no date range).
 - Keep guest personal data minimal in logs and in the repo (no full phone numbers or emails in .md files).

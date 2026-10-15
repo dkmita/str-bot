@@ -1,4 +1,4 @@
-"""Home Assistant (at the Sedona house), read-only for now: locks, door sensors, batteries.
+"""Home Assistant (at the Sedona house): locks, door sensors, batteries, and guest code slots (doorcodes.py).
 
 Reached over Tailscale: the Fly machine runs tailscaled in userspace mode (entrypoint.sh) and requests go through its
 local SOCKS5 proxy. (Its HTTP proxy adds a forwarding header that HA rejects with 400 from an untrusted proxy.) Auth: a long-lived token of a dedicated non-admin HA user (HA_TOKEN)."""
@@ -19,6 +19,16 @@ class HomeAssistant:
         r = self._client.get(self.url + path)
         r.raise_for_status()
         return r.json()
+
+    def states(self) -> list[dict]:
+        return self._get("/api/states")
+
+    def state(self, entity_id: str) -> dict:
+        return self._get(f"/api/states/{entity_id}")
+
+    def call(self, domain: str, service: str, entity_id: str, **data) -> None:
+        r = self._client.post(f"{self.url}/api/services/{domain}/{service}", json={"entity_id": entity_id, **data})
+        r.raise_for_status()
 
     def ping(self) -> str:
         return self._get("/api/")["message"]  # "API running."
