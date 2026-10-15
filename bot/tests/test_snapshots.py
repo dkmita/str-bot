@@ -38,7 +38,11 @@ def test_host_md_is_read_only_for_the_bot(repo_dir):
 
 def test_locks_text():
     from integrations.homeassistant import locks_text
-    d = {"locks": [{"name": "Garage side door", "state": "locked"}],
-         "doors": [{"name": "Front door", "state": "off"}],
-         "batteries": [{"name": "Garage lock battery", "level": 22.0}, {"name": "Front sensor", "level": 90.0}]}
-    assert locks_text(d) == "🏠 Sedona house\n🔒 Garage side door: locked\n✔️ closed · Front door\n🪫 Garage lock battery: 22%"
+    d = {"locks": [{"name": "Garage Lock", "state": "unlocked"}],
+         "doors": [{"name": "Back Door Contact Sensor", "state": "off"}, {"name": "Hallway Sliding Door", "state": "off"}],
+         "leaks": [{"name": "Kitchen Leak Detector", "state": "off"}],
+         "batteries": [{"name": "Kitchen Leak Detector Battery", "level": 3.0}, {"name": "Front sensor", "level": 90.0}]}
+    assert locks_text(d) == ("🏠 Sedona house\n🔓 Garage Lock: unlocked\n✔️ All 2 doors/windows closed\n"
+                             "✔️ No leaks (1 sensors)\n🪫 Kitchen Leak Detector Battery: 3%")
+    d["leaks"][0]["state"] = "on"
+    assert "💧 LEAK: Kitchen Leak Detector" in locks_text(d)
