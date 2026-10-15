@@ -20,4 +20,4 @@ primary_region = "dfw"
 # No [http_service]: the bot only makes outbound connections (Telegram polling).
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "256mb"
+  memory = "512mb"
